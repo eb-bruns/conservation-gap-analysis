@@ -1,7 +1,7 @@
-################################################################################
-
-### Author: Emily Beckman Bruns, with edits from Kate Good and Jean Linsky
-### Supporting institutions: The Morton Arboretum, Atlanta Botanical Garden
+### surveymonkey_processing.R
+### Authors: Emily Beckman Bruns, with edits from Kate Good and Jean Linsky
+### Supporting institutions: The Morton Arboretum, Atlanta Botanical Garden,
+#   Botanic Gardens Conservation International-US
 ### Last Updated: Oct 2022
 
 ### DESCRIPTION:

@@ -1,9 +1,7 @@
-################################################################################
-
 ### get_taxonomic_info.R
 ### Authors: Emily Beckman Bruns & Shannon M Still 
-### Written: 5/30/2020
-### Last Updated: 2/26/2021
+### Supporting institutions: The Morton Arboretum, UC Davis Arboretum & Public Garden
+### Last Updated: Feb 2021 ; first written May 2020
 
 ### DESCRIPTION:
   # This script takes a list of taxa and uses the taxize package and static
@@ -24,13 +22,13 @@
   #   or can be reviewed and revised by hand (recommended) based on your
   #   taxonomic viewpoint
 
-### DATA IN:
+### INPUTS:
   # target_taxa.csv (list of target taxa) or create list by hand in script
     # one column: "taxon_name_acc" (genus, species, infra rank, and infra name,
     # all separated by one space each; hybrid symbol should be " x ", rather
     # than "_" or "✕" and go between genus and species)
 
-### DATA OUT:
+### OUTPUTS:
   # target_taxa_with_syn_all.csv
   # target_taxa_with_syn_filtered.csv
   # more info here: https://docs.google.com/spreadsheets/d/1dllfDXaZBLvB1AsrY1wDS-sPceKAdOY681bqUbfoQAs/edit?usp=sharing

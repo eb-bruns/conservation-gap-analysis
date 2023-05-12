@@ -13,9 +13,9 @@
   #   metadata.
   ## There are two examples presented below
   #   1) Mesoamerican oak gap analysis led by Kate Good (in Spanish)
-  #     ? Link to survey for reference ?
+  #      Link to survey, for reference: https://www.surveymonkey.com/r/Preview/?sm=CnQ3hxsX3348qL8e9BDDYkpXQvRTu5yvI6mPG67AuqquaEj8_2BkriYNJVZgfxC9f9
   #   2) Magnolia gap analysis led by Jean Linsky (in English)
-  #     ? Link to survey for reference ?
+  #     ? Link to survey, for reference ?
 
 ### INPUTS:
   ## SurveyMonkey Excel (xlsx) export from survey with multiple matrices,

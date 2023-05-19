@@ -4,9 +4,9 @@
 ### Last Updated: Feb 2021 ; first written May 2020
 
 ### DESCRIPTION:
-  # This script takes a list of taxa and uses the taxize package and static
+  ## This script takes a list of taxa and uses the taxize package and static
   #   backbones to pull taxonomic information from multiple databases.
-  # Information pulled includes:
+  ## Information pulled includes:
     # - Acceptance and authors from The Plant List (TPL); could not find good
     #   way to get synonyms
     # - Acceptance and authors plus synonyms from:
@@ -18,26 +18,25 @@
     # - Synonyms, conservation category, and assessment year from IUCN Red List
     # - There is a section for pulling GBIF synonyms, but not used currently
     #   because sometimes pulled completely unrelated names such as insects
-  # The output can either be used directly in following scripts
+  ## The output can either be used directly in following scripts
   #   or can be reviewed and revised by hand (recommended) based on your
   #   taxonomic viewpoint
 
-### INPUTS:
-  # target_taxa.csv (list of target taxa) or create list by hand in script
-    # one column: "taxon_name_acc" (genus, species, infra rank, and infra name,
-    # all separated by one space each; hybrid symbol should be " x ", rather
-    # than "_" or "✕" and go between genus and species)
+### INPUT:
+  ## target_taxa.csv (list of target taxa) or create list by hand in script
+  #   one column: "taxon_name_acc" (genus, species, infra rank, and infra name,
+  #   all separated by one space each; hybrid symbol should be " x ", rather
+  #   than "_" or "✕" and go between genus and species)
 
 ### OUTPUTS:
-  # target_taxa_with_syn_all.csv
-  # target_taxa_with_syn_filtered.csv
+  ## target_taxa_with_syn_all.csv
+  ## target_taxa_with_syn_filtered.csv
   # more info here: https://docs.google.com/spreadsheets/d/1dllfDXaZBLvB1AsrY1wDS-sPceKAdOY681bqUbfoQAs/edit?usp=sharing
 
 ### PLEASE NOTE:
-  # Some functions from taxize package require manual input so you must pause
+  ## Some functions from taxize package require manual input so you must pause
   #   to answer queries before continuing with script; these areas are marked
   #   with "!!" to help you spot them.
-  # See README file for more information
 
 ################################################################################
 # Load libraries

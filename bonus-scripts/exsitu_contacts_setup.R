@@ -14,13 +14,13 @@
   # https://drive.google.com/drive/folders/1X13TYt9cE3GmciS6H_hxZaiGvZ4UF52d?usp=share_link
 
 ### INPUTS:
-  # Export from BGCI PlantSearch (taxa & institutions) & GardenSearch (contacts)
+  ## Export from BGCI PlantSearch (taxa & institutions) & GardenSearch (contacts)
   #   databases, which are not publicly available. Find the databases and 
   #   request data here: https://www.bgci.org/resources/bgci-databases/
-  # (optional) Target taxa list for your project
+  ## (optional) Target taxa list for your project
 
 ### OUTPUT:
-  # CSV with columns used in a mail merge message, including: Institution, 
+  ## CSV with columns used in a mail merge message, including: Institution, 
   #   contact_name, target_taxa, and contact_email. Additional optional 
   #   metatdata can be included, like InstitutionType, Latitude, Longitude, 
   #   and/or contact_type (Primary, Director, Curator, Plant Records Officer)

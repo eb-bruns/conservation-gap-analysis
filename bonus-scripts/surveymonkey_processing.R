@@ -17,7 +17,7 @@
   #   2) Magnolia gap analysis led by Jean Linsky (in English)
   #     ? Link to survey, for reference ?
 
-### INPUTS:
+### INPUT:
   ## SurveyMonkey Excel (xlsx) export from survey with multiple matrices,
   #   species, and regions. Since each survey is a little different, you 
   #   will need to explore the format of your export.

@@ -1,5 +1,5 @@
 ### exsitu_contacts_setup.R
-### Authors: Emily Beckman Bruns
+### Author: Emily Beckman Bruns
 ### Supporting institutions: The Morton Arboretum, United States Botanic Garden,
 #   Botanic Gardens Conservation International-US, San Diego Botanic Garden,
 #   Missouri Botanical Garden
@@ -47,7 +47,7 @@ select <- dplyr::select
 ### WORKING DIRECTORY ###
 #########################
 
-main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/BGCI-US/CWR North America (2021-2022)/Ex situ survey"
+main_dir <- "path/to/my/folder"
 
 ###############################################################################
 # Load data

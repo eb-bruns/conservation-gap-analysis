@@ -1,63 +1,109 @@
-################################################################################
-
 ### 2-compile_exsitu_data.R
-
 ### Author: Emily Beckman Bruns
-### Funding: Base script was funded by the Institute of Museum and Library 
-# Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-# Moderate edits were added with funding from a cooperative agreement
-# between the United States Botanic Garden and San Diego Botanic Garden
-# (subcontracted to The Morton Arboretum), with support from
-# Botanic Gardens Conservation International U.S.
-
-### Creation date: 13 December 2019
-### Last updated: 05 December 2022
+### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
+#   International-US, United States Botanic Garden, San Diego Botanic Garden,
+#   Missouri Botanical Garden
+### Funding: Base script funded by the Institute of Museum and Library 
+#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
+#   Moderate edits were added with funding from a cooperative agreement
+#   between the United States Botanic Garden and San Diego Botanic Garden
+#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Last Updated: May 2023 ; first written Dec 2019
 ### R version 4.2.2
 
 ### DESCRIPTION:
-# This script takes a folder of CSV files representing accessions data from
-# different botanical garden collections, combines them into one dataset, 
-# and standardizes some important fields.
-# !Please note! that significant user input and edits are needed, since every 
-# ex situ dataset is unique. Go slowly step-by-step and continue checking that 
-# everything is as expected. 
+  ## This script takes a folder of CSV files representing accessions data from
+  #   different botanical garden collections, combines them into one dataset, 
+  #   and standardizes some important fields.
+  ## !Please note! that significant user input and edits are needed, since every 
+  #   ex situ dataset is unique. Go slowly step-by-step and continue checking 
+  #   that everything is as expected. 
 
 ### INPUTS:
 #
 # 1. exsitu_standard_column_names (folder)
 #    Accessions data from ex situ collections survey; CSV files whose column
 #    names have been standardized by hand using instructions in the
-#    "Processing ex situ data" tab in Gap-analysis-workflow_metadata.xlsx
+#    "Processing ex situ data" tab in Gap-analysis-workflow_metadata workbook
 #
-# 2. institution_data_table.csv
+# 2. respondent_institution_data_table.csv
 #    Table with metadata for institutions who provided accessions data during
-#    the ex situ collections survey; see example in
-#    Gap-analysis-workflow_metadata.xlsx
+#    the ex situ collections survey; see example in the
+#    "Processing ex situ data" tab in Gap-analysis-workflow_metadata workbook
 #
 # 3. target_taxa_with_synonyms.csv
-#    List of target taxa and synonyms; see example in
-#    Gap-analysis-workflow_metadata.xlsx
+#    List of target taxa and synonyms; see example in the "Target species list"
+#    tab in Gap-analysis-workflow_metadata workbook
 #
-# 4. Accession-level data downloads from international crop genebank
-#    databases; download instructions are provided within the script below
+# 4. (optionally) Accession-level data downloads from two international crop 
+#    genebank databases; download instructions are provided within the script
 # (a) Genesys [Global Crop Diversity Trust]:
 #     https://www.genesys-pgr.org/a/overview
 # (b) WIEWS [FAO's World information and early warning system on plant genetic
 #     resources for food and agriculture]:
 #     https://www.fao.org/wiews/data/ex-situ-sdg-251/search/en/?no_cache=1
 #
-# 5. Polygons...
+# 5. UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp
+#    World country boundaries used to add the lat-long country for each record
+#    and to check if the given coordinate is in water; layer can be downloaded
+#    from https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
+# 
+# 6. (optionally) ExSitu_Need_Geolocation_YYYY-MM-DD_Geolocated.csv
+#    If you manually geolocate records, you'll use this to update your final 
+#    dataset
 
 ### OUTPUTS:
-# 
+  ## Genera_Institutions_Summary_YYYY_MM_DD.csv
+  #   Summary of which genera each institution reports:
+  #     inst_short    genera 
+  #     ARM005        Amygdalus; Cerasus; Diospyros; Prunus  
+  #     HuntingtonBG  Asimina; Carya; Diospyros; Juglans; Prunus
+  #     ...
+  ## ExSitu_Unmatched_Species_YYYY_MM_DD.csv
+  #   List of taxa in the ex situ accessions data that have no match in your
+  #   target taxa list (target_taxa_with_synonyms.csv); these can be reviewed
+  #   manually and added, as desired, to the synonyms in your taxa list
+  ## ExSitu_Dead_YYYY_MM_DD.csv
+  #   All ex situ records with zero individuals (dead / removed accessions);
+  #   we remove these from the ex situ data, but use them in the wild occurrence
+  #   data, since it may provide an additional wild location; has all
+  #   columns selected for your final export of ex situ data
+  ## ExSitu_Compiled_No-Dups-Combined_YYYY_MM_DD.csv
+  #   Version of final ex situ dataset right before combining duplicates at the
+  #   accession level. Some institutions provided data at the individual level,
+  #   but we are trying to standardize to the accession level. But, this
+  #   pre-dup-removal version is saved for reference, just in case.
+  ## All_ExSitu_Compiled_YYYY_MM_DD.csv
+  #   If you're not manually geolocating (finding lat-long for records with 
+  #   no coordinates but wild collection locality description), this is your
+  #   final dataset. If you are geolocating, see the next outputs. For 
+  #   descriptions of columns in the output, see the "Ex situ data output" tab
+  #   in Gap-analysis-workflow_metadata 
+  ## ExSitu_Geolocation_Needs_Summary_YYYY_MM_DD.csv
+  #   Summary for each taxon of how many records may need to be manually 
+  #   geolocated (NoCoords_YesLocality), the number of records that already 
+  #   have lat-long (YesCoords), and a comparison (Percent_NeedGeo):
+  #     taxon_name_accepted num_acc num_wild YesCoords NoCoords_YesLocality Percent_NeedGeo
+  #     Asimina obovata     3       1        1         0                    0  
+  #     Asimina parviflora  15      5        3         6                    66.7
+  #     Asimina tetramera   9       3        0         9                    100
+  #     ...
+  ## ExSitu_Need_Geolocation_YYYY_MM_DD.csv
+  #   This is the dataset you will go through and manually geolocate; 
+  #   instructions for geolocating can be found here:
+  #   https://docs.google.com/document/d/1RBUD6-ogLc7PRVkDJSIEKzkgvC6xekj9Q_kl1vzxhCs/edit?usp=share_link
+  ## All_ExSitu_Compiled_Post-Geolocation_YYYY_MM_DD.csv
+  #   Final ex situ dataset, saved to both your ex situ output folder and your
+  #   raw in situ input data folder (to use in mapping wild occurrences).
+  #   For descriptions of columns in the output, see the "Ex situ data output"
+  #   tab in Gap-analysis-workflow_metadata 
 
 ################################################################################
 # Load libraries
 ################################################################################
 
-my.packages <- c('plyr', 'tidyverse', 'textclean', 'spatialEco',
-                 'maps', 'measurements', 'CoordinateCleaner', 'raster',
-                 'data.table', 'terra', 'tidyterra')
+my.packages <- c('plyr','tidyverse','textclean','CoordinateCleaner',
+                 'data.table','terra','tidyterra')
 # install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -77,12 +123,12 @@ distinct <- dplyr::distinct
 #main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/CWR North America Gap Analysis/Gap-Analysis-Mapping"
 
 # or use 0-set_working_directory.R script:
-source("/Users/emily/Documents/GitHub/SDBG_CWR-trees-gap-analysis/0-set_working_directory.R")
+source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/1-set_working_directory.R")
+main_dir
 
 # set folders where you have raw data (in) and want processed data to go (out)
-exsitu_dir <- paste0(main_dir,"/ex-situ_data")
-data_in <- "exsitu_standard_column_names"
-data_out <- "OUTPUTS_FROM_R"
+data_in <- "raw_exsitu_data"
+data_out <- "standardized_exsitu_data"
 
 ################################################################################
 # Load functions
@@ -154,13 +200,14 @@ read.exsitu.csv <- function(path,submission_year){
 # "inst_short" institution nickname] 2) a submission year, 3) an accession
 # number if one isn't given
 ### CHANGE BASED ON FOLDER(S) AND YEAR(S) YOU HAVE
-all_data <- read.exsitu.csv(file.path(exsitu_dir,data_in), "2022") #168
+all_data <- read.exsitu.csv(file.path(main_dir,exsitu_dir,data_in,
+                                      "exsitu_standard_column_names"), "2022") #168
 # stack all data if you had multiple years:
 #to_stack <- list(raw_2022,raw_2021,raw_2020,raw_2019,raw_2018,raw_2017)
 #all_data <- Reduce(rbind.fill, to_stack)
 
 ### IF APPLICABLE:
-sort(colnames(all_data)) # check for duplicates/typos
+sort(colnames(all_data))
   # combine multiple inst_short columns
 #all_data <- tidyr::unite(all_data,"inst_short",
 #  c("inst_short","inst_short2"),
@@ -179,7 +226,7 @@ all_data <- all_data[which(!is.na(all_data$inst_short)),]
 all_data <- all_data[which(all_data$inst_short!="ManualEntry"),]
 
 # read in institution metadata file, for comparing list to data read in
-inst_data <- read.csv(file.path(exsitu_dir,
+inst_data <- read.csv(file.path(main_dir, exsitu_dir, data_in,
   "respondent_institution_data_table.csv"), stringsAsFactors = F)
 #inst_data$parent_R_file <- gsub("\\{PARENT\\}","",inst_data$parent_R_file)
 ## CHECK ALL INSTITUTIONS ARE PRESENT
@@ -211,10 +258,11 @@ sort(unique(all_data$genus))
 #all_data$taxon_full_name <- mgsub(all_data$taxon_full_name,
 #  c("Q\\.","Cyclobalanopsis"), "Quercus",fixed=F)
 
-# remove duplicate data - from previous years or networks
+# remove duplicate data if needed - from previous years or networks
 ### UPDATE THIS SECTION BASED ON YOUR SPECIFIC NEEDS; THIS IS FOR QUERCUS 2022:
 nrow(all_data) #25653
 #all_data$file_inst_year <- paste(all_data$filename,all_data$inst_short,all_data$submission_year)
+#
 #  # 1) remove datasets that have no Quercus data (so we know they aren't dups)
 #inst_genera <- all_data %>%
 #  group_by(filename,inst_short,submission_year) %>%
@@ -224,6 +272,7 @@ nrow(all_data) #25653
 #  mutate(file_inst_year = paste(filename,inst_short,submission_year))
 #all_data <- all_data %>% filter(file_inst_year %in% yes_Q$file_inst_year)
 #nrow(all_data) #156714
+#
 #  # 2) remove old datasets if there is newer data from 2018-2020
 #all_data$inst_and_year <- paste(all_data$inst_short,all_data$submission_year)
 #find_dups <- all_data %>%
@@ -235,6 +284,7 @@ nrow(all_data) #25653
 #remove_dups <- paste(remove_dups$inst_short,remove_dups$submission_year); remove_dups
 #all_data <- all_data %>% filter(!(inst_and_year %in% remove_dups))
 #nrow(all_data) #127495
+#
 #  # 3) if there is duplicate network data, keep only the data direct from garden
 #network_data <- all_data %>% filter(inst_short != filename &
 #  (submission_year != "2022" & submission_year != "2021"))
@@ -309,7 +359,7 @@ all_data$orig_long <- mgsub(all_data$orig_long,
 all_data <- as.data.frame(lapply(all_data,replace_non_ascii),stringsAsFactors=F)
 
 ################################################################################
-# 2. Compile Genesys data (genebanks)
+# 2. [OPTIONAL] Compile Genesys data (genebanks)
 ################################################################################
 
 ### FIRST, download data from Genesys [Global Crop Diversity Trust]:
@@ -324,20 +374,20 @@ all_data <- as.data.frame(lapply(all_data,replace_non_ascii),stringsAsFactors=F)
 
 # load in data
   # collection site description
-genPath <- paste0(exsitu_dir,"/genesys-accessions/coll.csv")
+genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/coll.csv")
   # I think the "Found and resolved improper quoting" warning is ok
 gen_col <- data.table::fread(file = genPath, header = TRUE)
   str(gen_col)
   nrow(gen_col) ; length(unique(gen_col$genesysId)) #333
   # metadata about record
-genPath <- paste0(exsitu_dir,"/genesys-accessions/core.csv")
+genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/core.csv")
 gen_core <- data.table::fread(genPath, header = TRUE)
   str(gen_core)
   nrow(gen_core) ; length(unique(gen_core$genesysId)) #428
   # spatial info
   #   for some reason the headers dont read in correctly with fread;
   #   will use read.csv just to get the headers and add them to the fread df
-genPath <- paste0(exsitu_dir,"/genesys-accessions/geo.csv")
+genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/geo.csv")
 gen_geo <- data.table::fread(genPath, header = TRUE)
   str(gen_geo)
   colnames(gen_geo)
@@ -420,7 +470,7 @@ all_data <- all_data %>% filter(!(inst_short %in% USDAcodes))
 nrow(all_data) #89588
 
 ################################################################################
-# 3. Compile WIEWS data (genebanks)
+# 3. [OPTIONAL] Compile WIEWS data (genebanks)
 ################################################################################
 
 # 23 Nov 2022: For some reason the data aren't downloading; skipping this
@@ -438,7 +488,7 @@ nrow(all_data) #89588
 # rename to "wiews-exsitu.csv"
 
 # read in data
-wiewsPath <- paste0(exsitu_dir,"/Wiews_Exsitu.csv")
+wiewsPath <- file.path(main_dir, exsitu_dir, data_in, "Wiews_Exsitu.csv")
 #wiews <- data.table::fread(wiewsPath, header = TRUE)
 wiews <- read.csv(wiewsPath)
 str(wiews) #95551
@@ -510,14 +560,15 @@ nrow(all_data) #170639
 ################################################################################
 
 # create folder for output data
-if(!dir.exists(file.path(exsitu_dir,data_out)))
-  dir.create(file.path(exsitu_dir,data_out), recursive=T)
+if(!dir.exists(file.path(main_dir, exsitu_dir,data_out)))
+  dir.create(file.path(main_dir, exsitu_dir,data_out), recursive=T)
 
 all_data2 <- all_data
 nrow(all_data2) #126267
 
 # read in target taxa list
-taxon_list <- read.csv(file.path(main_dir, "target_taxa_with_synonyms.csv"),
+taxon_list <- read.csv(file.path(main_dir, taxa_dir,
+                                 "target_taxa_with_synonyms.csv"),
   header = T, na.strings = c("","NA"),colClasses = "character")
 str(taxon_list)
 #unique(taxon_list$taxon_region)
@@ -587,7 +638,7 @@ gen_summary <- all_data2 %>%
 head(as.data.frame(gen_summary),n=30)
 nrow(gen_summary) # number of institutions -- 438
 # write file
-write.csv(gen_summary, file.path(exsitu_dir,data_out,
+write.csv(gen_summary, file.path(main_dir, exsitu_dir,data_out,
                               paste0("Genera_Institutions_Summary_", 
                                      Sys.Date(), ".csv")),row.names = F)
 
@@ -780,8 +831,9 @@ check
   # IF YOU FIND MISSPELLINGS AND/OR ADDITIONAL SYNONYMS, YOU CAN ADD THEM TO
   #   YOUR TARGET TAXA LIST AND GO BACK TO THE LINE WHERE WE "read in target
   #   taxa list" (SECTION 4) AND RUN AGAIN FROM THERE
-write.csv(check, file.path(exsitu_dir,data_out,"ExSitu_UnmatchedSpecies.csv"),
-  row.names = F)
+write.csv(check, file.path(main_dir, exsitu_dir,data_out,
+                           paste0("ExSitu_Unmatched_Species_", Sys.Date(), 
+                                  ".csv")),row.names = F)
 
 # keep only matched names
 all_data5 <- all_data4 %>% 
@@ -834,6 +886,7 @@ all_data6 <- all_data5
 ################################################################################
 
 ## KEEP ONLY NECESSARY COLUMNS
+#   change this as needed based on the columns you want
 keep_col <- c(
   # key data
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type","num_indiv",
@@ -932,8 +985,8 @@ table(all_data7$prov_type)
 ## B) Number of Individuals
 ##
 
+# make everything lowercase
 all_data7$num_indiv <- str_to_lower(all_data7$num_indiv)
-sort(unique(all_data7$num_indiv))
   ## IF NEEDED: replace unwanted characters
   all_data7$num_indiv <- mgsub(all_data7$num_indiv,
     c(" \\(all dead\\)"," \\(removed 2017\\)","\\?",","," plants"," or 5",
@@ -942,26 +995,31 @@ sort(unique(all_data7$num_indiv))
       ";2",";3",";4",";5",";7",";0",";"),
       c(""), fixed=F)
   sort(unique(all_data7$num_indiv))
-  # change type to numeric and replace NA with 1
+  # save version where we identify which didn't have # of individuals provided
+  all_data7$num_indiv[which(!grepl("^[0-9]+$",all_data7$num_indiv))] <- "Unknown"
+  all_data7$orig_num_indiv <- all_data7$num_indiv
+  # now we change the type to numeric and replace NA with 1, so we can use this
+  #   in calculations and when combining duplicate records later
   # "NAs introduced by coercion" warning ok
-all_data7$num_indiv <- as.numeric(all_data7$num_indiv)
-all_data7$num_indiv[which(is.na(all_data7$num_indiv))] <- 1
+  all_data7$num_indiv <- as.numeric(all_data7$num_indiv)
+  all_data7$num_indiv[which(is.na(all_data7$num_indiv))] <- 1
 
 # check results
 sort(unique(all_data7$num_indiv))
 nrow(all_data7) #11361
 
-# remove records with no individuals; save as separate file
+# remove records with no individuals (first save as separate file)
 no_indiv <- all_data7[which(all_data7$num_indiv == 0),]
 nrow(no_indiv) #918
-write.csv(no_indiv, file.path(exsitu_dir,data_out,
+write.csv(no_indiv, file.path(main_dir, exsitu_dir,data_out,
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # save to in situ data folder as well
-if(!dir.exists(file.path(main_dir,"occurrence_data","raw_occurrence_data","Ex-situ")))
-  dir.create(file.path(main_dir,"occurrence_data","raw_occurrence_data","Ex-situ"),
+if(!dir.exists(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ")))
+  dir.create(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ"),
   recursive=T)
-write.csv(no_indiv, file.path(main_dir,"occurrence_data","raw_occurrence_data","Ex-situ",
+write.csv(no_indiv, file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ",
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
+  # remove records with no individuals
 all_data7 <- all_data7[which(all_data7$num_indiv > 0),]
 nrow(all_data7) #10443
 
@@ -1109,7 +1167,7 @@ no_coord$latlong_country <- ""
 crdref <- "+proj=longlat +datum=WGS84"
 geo_pts_spatial <- vect(cbind(have_coord$long_dd,have_coord$lat_dd),
   atts=have_coord, crs=crdref)
-world_polygons <- vect(file.path(main_dir,"gis_layers",
+world_polygons <- vect(file.path(main_dir,gis_dir,
   "UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp"))
 # add country polygon data to each point based on lat-long location
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
@@ -1129,7 +1187,7 @@ on_land <- geo_pts %>%
 on_land <- as.data.frame(on_land)
 nrow(on_land) #1587
 land_id <- unique(on_land$temp_id)
-# check if geolocated points are in water and mark
+# check if points are in water and mark
   # get points that have coords but didn't fall in a country;
   # these are in the water
 in_water <- have_coord %>% filter(!(temp_id %in% land_id))
@@ -1177,7 +1235,8 @@ table(all_data9$prov_type)
 ## D) Collection year
 ##
 
-# not using this part right now
+# I decided I didn't have time to standardize the collection year column; 
+# if you'd like to do that, you can play with updating the following section
 sort(unique(all_data9$coll_year))
 # separate additional years
 #all_data9 <- all_data9 %>% 
@@ -1233,7 +1292,8 @@ all_data9[which(all_data9$acc_num == all_data9$lin_num),]$lin_num <- NA
 ## F) Locality
 ##
 
-# create all_locality column
+# create all_locality column (combining all locality data into one column for
+# easy reference)
 all_data9$latitude <- round(all_data9$lat_dd,digits=4)
 all_data9$longitude <- round(all_data9$long_dd,digits=4)
 all_data9 <- unite(all_data9, "all_locality",
@@ -1265,7 +1325,7 @@ table(all_data9$data_source)
 ##
 
 # save version without duplicates combined, in cases needed for reference
-write.csv(all_data9, file.path(exsitu_dir,data_out,
+write.csv(all_data9, file.path(main_dir, exsitu_dir,data_out,
                               paste0("ExSitu_Compiled_No-Dups-Combined_", 
                                      Sys.Date(), ".csv")),row.names = F)
 
@@ -1278,6 +1338,7 @@ all_data9$acc_num <- gsub(" ","-",all_data9$acc_num)
 all_data9 <- all_data9 %>%
   group_by(inst_short,acc_num,taxon_name_accepted) %>%
   mutate(num_indiv = sum(as.numeric(num_indiv)),
+         orig_num_indiv = paste(unique(orig_num_indiv),collapse="; "),
          germ_type = paste(unique(germ_type),collapse="; "),
          garden_loc = paste(unique(garden_loc),collapse="; "),
          orig_acc_num = paste(unique(orig_acc_num),collapse="; "),
@@ -1305,6 +1366,7 @@ combine_acc_dups <- function(df,char_cutoff,pattern){
     separate("acc_num","acc_num",sep=pattern,remove=F) %>%
     group_by(inst_short,acc_num,taxon_name_accepted) %>%
     mutate(num_indiv = sum(as.numeric(num_indiv)),
+           orig_num_indiv = paste(unique(orig_num_indiv),collapse="; "),
            germ_type = paste(unique(germ_type),collapse="; "),
            garden_loc = paste(unique(garden_loc),collapse="; "),
            orig_acc_num = paste(unique(orig_acc_num),collapse="; "),
@@ -1316,8 +1378,8 @@ combine_acc_dups <- function(df,char_cutoff,pattern){
   return(df_return)
 }
 
-### THE NEXT SECTION NEEDS TO BE THOROUGHLY REVEIWED AND 
-###  EDITED TO FIT YOUR DATASET !
+### !! THE NEXT SECTION NEEDS TO BE THOROUGHLY REVEIWED AND 
+###  EDITED TO FIT YOUR DATASET !!
 ### Otherwise you will combine records that do not belong together
 
 # can look at what will be combined before we actually combine things...
@@ -1382,7 +1444,7 @@ nrow(all_data9) #8380
 # 7. Summary statistics
 ################################################################################
 
-## FINAL VERSION: KEEP ONLY NECESSARY COLUMNS
+## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
 keep_col <- c(
   # key data
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type","num_indiv",
@@ -1403,27 +1465,31 @@ keep_col <- c(
   # institution metadata
   "inst_country","inst_lat","inst_long","inst_type",
   # original versions of columns, for reference
-  "orig_prov_type","orig_acc_num","orig_lat","orig_long",
+  "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
   # OPTIONAL additional taxon metadata
   "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
 )
 data_sel <- all_data9[,keep_col]
 
 # write file
-write.csv(data_sel, file.path(exsitu_dir,data_out,
+write.csv(data_sel, file.path(main_dir, exsitu_dir,data_out,
   paste0("All_ExSitu_Compiled_", Sys.Date(), ".csv")),row.names = F)
 
-# [OPTIONAL] regional subsets for easier use:
+# [OPTIONAL] regional subsets for easier use if lots of data:
 #meso <- data_sel %>% filter(grepl("Mesoamerica",taxon_region))
 #nrow(meso) #6514
-#write.csv(meso, file.path(exsitu_dir,data_out,
+#write.csv(meso, file.path(main_dir, exsitu_dir,data_out,
 #  paste0("Mesoamerican-spp_ExSitu_Compiled_", Sys.Date(), ".csv")),
 #  row.names = F)
 
 
 ################################################################################
-# 8. (Optionally) Explore geoerferencing needs
+# 8. (Optionally) Explore georeferencing needs
 ################################################################################
+
+# if desired, you can try to manually find the latitude and longitude for 
+# records with wild collection locality descriptions; the remaining sections
+# help with this process
 
 ### explore georeferencing needs
 # table with...
@@ -1447,11 +1513,11 @@ geo_needs <- data_sel %>%
   )
 head(geo_needs,n=20)
 # write file
-write.csv(geo_needs, file.path(exsitu_dir,data_out,
+write.csv(geo_needs, file.path(main_dir, exsitu_dir,data_out,
   paste0("ExSitu_Geolocation_Needs_Summary_", Sys.Date(), ".csv")),
   row.names = F)
 
-# records that may need geolocation
+# select records that may need geolocation
 #   (no lat-long, yes locality, prov type not H)
 #   (also add flagged records: water or at institution)
 need_geo <- data_sel %>%
@@ -1478,8 +1544,8 @@ need_geo <- need_geo %>%
          state,country,flag)
 nrow(need_geo) #2907
 head(need_geo)
-# flag records for species that are high priority...
-#   threatened and/or have less than 15 wild accessions
+# optionally, flag records for taxa that are highest priority for geolocating;
+#   e.g., threatened and/or have less than 15 wild accessions
 #   (you can choose whatever threshold you want)
   # thresholds
 rl_threat <- c("CR (Critically Endangered)","EN (Endangered)","VU (Vulnerable)")
@@ -1496,23 +1562,27 @@ need_geo <- left_join(need_geo,priority_taxa)
 table(need_geo$priority) #456
 
 # write file
-write.csv(need_geo, file.path(exsitu_dir,data_out,
+write.csv(need_geo, file.path(main_dir, exsitu_dir,data_out,
   paste0("ExSitu_Need_Geolocation_", Sys.Date(), ".csv")),row.names = F)
 
 ### NOW MANUALLY GEOLOCATE !
 ### INSTRUCTIONS FOR GEOLOCATING:
-### https://docs.google.com/document/d/1RBUD6-ogLc7PRVkDJSIEKzkgvC6xekj9Q_kl1vzxhCs/edit?usp=sharing
+### https://docs.google.com/document/d/1RBUD6-ogLc7PRVkDJSIEKzkgvC6xekj9Q_kl1vzxhCs/edit?usp=share_link
+
+### When you're done geolocating, save your file with the same name but add 
+### "_Geolocated" to the end
+### We will read this in next!
 
 ################################################################################
 # 9. Add geolocated data, after manual geolocation
 ################################################################################
 
 # read in all compiled ex situ data (exported above)
-exsitu <- read.csv(file.path(exsitu_dir,data_out,
+exsitu <- read.csv(file.path(main_dir, exsitu_dir,data_out,
   "All_ExSitu_Compiled_2022-12-07.csv"), header = T, colClasses="character")
 
 # read in geolocated dataset
-geo_raw <- read.csv(file.path(exsitu_dir,data_out,
+geo_raw <- read.csv(file.path(main_dir, exsitu_dir,data_out,
   "ExSitu_Need_Geolocation_2022-12-07_Geolocated.csv"),
   header = T, colClasses="character")
 head(geo_raw)
@@ -1550,16 +1620,14 @@ nrow(exsitu_no_geo)
 exsitu_all <- rbind.fill(exsitu_no_geo,exsitu_geo)
 nrow(exsitu_all)
 table(exsitu_all$gps_det)
-      #   L     C    G     X     H
-      #   289   62   1261  1331  2095
 
-# write new file
-write.csv(exsitu_all, file.path(exsitu_dir,data_out,
+# write final file
+write.csv(exsitu_all, file.path(main_dir, exsitu_dir, data_out,
   paste0("All_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 # write to in situ folder also
-write.csv(exsitu_all, file.path(main_dir,"occurrence_data",
-                                "raw_occurrence_data","Ex-situ",
+write.csv(exsitu_all, file.path(main_dir, occ_dir, 
+                                "raw_occurrence_data", "Ex-situ",
   paste0("ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 
@@ -1577,7 +1645,7 @@ write.csv(exsitu_all, file.path(main_dir,"occurrence_data",
 ### it goes between step 8 and 9 above, if using
 
 ################################################################################
-# 8.5 (Optionally) Create file(s) for GEOLocate
+# 8.5 (Optionally) Create file(s) for GEOLocate (https://www.geo-locate.org)
 ################################################################################
 
 # read in data in again, if you didn't just run the whole script

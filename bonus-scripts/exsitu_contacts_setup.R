@@ -15,14 +15,15 @@
 
 ### INPUTS:
   # Export from BGCI PlantSearch (taxa & institutions) & GardenSearch (contacts)
-  # databases, which are not publicly available. Find the databases and 
-  # request data here: https://www.bgci.org/resources/bgci-databases/
+  #   databases, which are not publicly available. Find the databases and 
+  #   request data here: https://www.bgci.org/resources/bgci-databases/
+  # (optional) Target taxa list for your project
 
-### OUTPUTS:
+### OUTPUT:
   # CSV with columns used in a mail merge message, including: Institution, 
-  # contact_name, target_taxa, and contact_email. Additional optional metatdata 
-  # can be included, like InstitutionType, Latitude, Longitude, and/or 
-  # contact_type (Primary, Director, Curator, Plant Records Officer)
+  #   contact_name, target_taxa, and contact_email. Additional optional 
+  #   metatdata can be included, like InstitutionType, Latitude, Longitude, 
+  #   and/or contact_type (Primary, Director, Curator, Plant Records Officer)
 
 ################################################################################
 
@@ -56,18 +57,44 @@ main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/BGCI-US/CWR Nor
 target_sp <- read.csv(file.path(main_dir,
   "North America CWR taxa list with synonyms.csv"),
   header = T, na.strings=c("","NA"), colClasses="character")
-head(target_sp); nrow(target_sp) #266
+head(target_sp)
+# Taxon.accepted      Taxon.including.synonyms
+# Asimina incana	    Annona incana
+# Asimina incana	    Asimina incana
+# Asimina longifolia	Asimina angustifolia
+# Asimina longifolia	Asimina longifolia
+# ...
+nrow(target_sp) #266
 length(unique(target_sp$Taxon.accepted)) #90
 
-# read in PlantSearch data for High Priority taxa
+# read in PlantSearch data
 ps <- read.csv(file.path(main_dir, "CWR PS match 01.13.22.csv"),
   header = T, na.strings=c("","NA"), colClasses="character")
-head(ps); nrow(ps) #3576
+head(ps) # note that the emails and names in the example below have been removed
+         # to protect their privacy
+# Taxon.accepted	    Taxon.including.synonyms	Institution	                    PrimaryEmail  DirectorName  DirectorEmail CuratorName	CuratorEmail	PlantRecordsOfficerName	PlantRecordsOfficerEmail	InstitutionType
+# Asimina longifolia	Asimina angustifolia      North Carolina Botanical Garden	email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# Asimina longifolia	Asimina angustifolia	    JC Raulston Arboretum	US        email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# Asimina longifolia	Asimina longifolia	      National Plant Germplasm System	email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Network
+# Asimina obovata	    Asimina obovata	          Missouri Botanical Garden	      email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# ...
+nrow(ps) #3576
 
-# read in all GardenSearch data
+# read in GardenSearch data
+# this is only needed if you want to send a message, for example, to all gardens
+# in a specific region, versus only contacting gardens that have your target 
+# taxa; for the latter, you will only need the PlantSearch export above
 gs <- read.csv(file.path(main_dir, "All-GSgardens_Jan25-2022.csv"),
   header = T, na.strings=c("","NA"), colClasses="character")
-head(gs); nrow(gs) #3736
+head(gs) # note that the emails and names in the example below have been removed
+         # to protect their privacy
+# Institution	                    CountryCode	  PrimaryEmail	DirectorName	DirectorEmail	CuratorName	CuratorEmail	PlantRecordsOfficerName	PlantRecordsOfficerEmail	InstitutionType
+# North Carolina Botanical Garden	US            email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# JC Raulston Arboretum           US            email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# National Plant Germplasm System	US            email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Network
+# Missouri Botanical Garden	      US            email@org.org Name          email@org.org Name        email@org.org Name                    email@org.org     	      Botanic Garden
+# ...
+nrow(gs) #3736
 
 ###############################################################################
 # Create summary table with taxa at each instittuion (for mail merge)
@@ -196,12 +223,12 @@ str(ps_join2)
 ### !! GARDENS WITH NO CONTACT INFO & NUMBER OF TARGET TAXA AT EACH !!
 ps_join2[which(is.na(ps_join2$contact_email)),c(1,15)]
   # add contacts found online
-ps_join2[which(ps_join2$Institution == "Forstbotanischer Garten Eberswalde"),16:18] <-
- list("Mr. Prof. Dr. Matthias Barth","buero.praesident@hnee.de","Director")
-ps_join2[which(ps_join2$Institution == "Forstbotanischer Garten und Arboretum"),16:18] <-
- list("Prof. Dr. Andrea Polle","apolle@gwdg.de","Curator")
-ps_join2[which(ps_join2$Institution == "Botanischer Garten der Universität Freiburg"),16:18] <-
- list("Colleague","botanischer.garten@biologie.uni-freiburg.de","Primary")
+ps_join2[which(ps_join2$Institution == "Institution name"),16:18] <-
+ list("Contact Name","name@email.com","Director")
+ps_join2[which(ps_join2$Institution == "Institution name"),16:18] <-
+ list("Contact Name","name@email.com","Curator")
+ps_join2[which(ps_join2$Institution == "Institution name"),16:18] <-
+ list("Colleague","name@email.com","Primary")
 
 ### !! NETWORKS !!
 ps_join2[which(ps_join2$InstitutionType == "Network"),1:2]
@@ -216,7 +243,7 @@ instl <- ps_final[nchar(ps_final$Institution)==max(nchar(ps_final$Institution)),
 namel <- ps_final[nchar(ps_final$contact_name)==max(nchar(ps_final$contact_name)),]$contact_name[1]
 taxal <- ps_final[nchar(ps_final$target_taxa)==max(nchar(ps_final$target_taxa)),]$target_taxa[1]
 dummy_row <- data.frame(Institution=instl, contact_name=namel, target_taxa=taxal,
-  contact_email="ebeckman@mortonarb.org")
+  contact_email="my-email@org.org")
 ps_final <- full_join(dummy_row,ps_final)
 
 # write file
@@ -228,7 +255,7 @@ write.xlsx(ps_final, file.path(main_dir,"Mail Merge",
 # Create list of U.S. and Canada institutions not already contacted (for secondary mail merge)
 ###############################################################################
 
-# remove insitutions already contacted
+# remove institutions already contacted
 gs_nam <- gs %>% filter(CountryCode == "US" | CountryCode == "CA")
 nrow(gs_nam) #1156
 direct_contact <- unique(ps$Institution)
@@ -344,13 +371,13 @@ gs_join2[which(is.na(gs_join2$contact_email)),2]
 instl <- gs_join2[nchar(gs_join2$Institution)==max(nchar(gs_join2$Institution)),]$Institution[1]
 namel <- gs_join2[nchar(gs_join2$contact_name)==max(nchar(gs_join2$contact_name)),]$contact_name[1]
 dummy_row <- data.frame(Institution=instl, contact_name=namel,
-  contact_email="ebeckman@mortonarb.org")
+  contact_email="my-email@org.org")
 gs_final <- full_join(dummy_row,gs_join2)
 
-# add entry that sends to Abby, so she can forward along
-abby_row <- data.frame(Institution="your institution", contact_name="Colleague",
-  contact_email="abby.meyer@bgci.org")
-gs_final <- full_join(gs_final,abby_row)
+# add entry that sends to a colleague, so they can forward along
+add_row <- data.frame(Institution="your institution", contact_name="Colleague",
+  contact_email="my-email@org.org")
+gs_final <- full_join(gs_final,add_row)
 
 # write file
 write.xlsx(gs_final, file.path(main_dir,"Mail Merge",

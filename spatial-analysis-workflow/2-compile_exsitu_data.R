@@ -327,7 +327,7 @@ all_data <- tidyr::unite(all_data,"coll_year",
                          c("coll_year","coll_date","rec_year","planted_year","rec_date"),
                          sep="; ",remove=T,na.rm=T)
 ## IF NEEDED: rename columns
-#all_data <- all_data %>% rename(gps_det = coord_notes)
+#all_data <- all_data %>% rename(latlong_det = coord_notes)
 ## IF NEEDED: change # of individuals for rows that say dead/removed, etc.
 sort(unique(all_data$condition))
 #all_data[which(all_data$condition=="Dead"),]$num_individuals <- "0"
@@ -434,12 +434,12 @@ genesys_sel <- genesys %>%
          country = origCty,
          orig_lat = latitude,
          orig_long = longitude,
-         gps_det = method,
+         latlong_det = method,
          germ_type = storage,
          orig_source = collSrc,
          prov_type = sampStat) %>%
   select(UID,taxon_full_name,coll_num,coll_year,locality,notes,
-    inst_short,acc_num,infra_rank,country,orig_lat,orig_long,gps_det,
+    inst_short,acc_num,infra_rank,country,orig_lat,orig_long,latlong_det,
     germ_type,orig_source,prov_type,genus,species,uncertainty)
 
 # filter by target taxa & add taxon data
@@ -896,7 +896,7 @@ keep_col <- c(
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
   "orig_lat","orig_long","locality","municipality","county","state","country",
-  "gps_det","uncertainty","assoc_sp",
+  "latlong_det","uncertainty","assoc_sp",
   # source
   "orig_source","lin_num","coll_name","coll_num","coll_year",
   # material info
@@ -1161,7 +1161,7 @@ all_data8[!coord_test,"long_dd"] <- NA
 nrow(all_data8) #10443
 
 ### now we'll work just with the geolocated points for a bit
-all_data8$flag <- ""
+all_data8$latlong_flag <- ""
 have_coord <- all_data8 %>% filter(!is.na(lat_dd) & !is.na(long_dd))
 nrow(have_coord) #1734
 no_coord <- anti_join(all_data8,have_coord)
@@ -1181,12 +1181,12 @@ on_land[which(on_land$COUNTRY == "Antarctica"),c("lat_dd","long_dd")] <-
   on_land[which(on_land$COUNTRY == "Antarctica"),c("long_dd","lat_dd")]
 head(on_land)
 # remove columns from first join and join to countries again
-on_land <- on_land %>% select(UID:flag)
+on_land <- on_land %>% select(UID:latlong_flag)
 geo_pts_spatial <- vect(cbind(on_land$long_dd,on_land$lat_dd),
   atts=on_land, crs=crdref)
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
 on_land <- geo_pts %>%
-  select(UID:flag,COUNTRY) %>%
+  select(UID:latlong_flag,COUNTRY) %>%
   rename(latlong_country = COUNTRY)
 on_land <- as.data.frame(on_land)
 nrow(on_land) #1587
@@ -1196,7 +1196,7 @@ land_id <- unique(on_land$temp_id)
   # these are in the water
 in_water <- have_coord %>% filter(!(temp_id %in% land_id))
 in_water <- as.data.frame(in_water)
-in_water$flag <- "Given lat-long is in water"
+in_water$latlong_flag <- "Given lat-long is in water"
 in_water$latlong_country <- ""
 nrow(in_water) #147
 # bind all the points back together
@@ -1212,24 +1212,24 @@ garden_latlong <- all_data9 %>% filter(lat_round == inst_lat_round &
   long_round == inst_long_round & prov_type != "N")
 unique(garden_latlong$inst_short)
 nrow(garden_latlong)
-all_data9[which(all_data9$temp_id %in% garden_latlong$temp_id),]$flag <-
+all_data9[which(all_data9$temp_id %in% garden_latlong$temp_id),]$latlong_flag <-
   "Given lat-long is at institution, use only if native to grounds"
 #all_data9[all_data9$UID %in% garden_latlong$UID,]$lat_dd <- NA
 #all_data9[all_data9$UID %in% garden_latlong$UID,]$long_dd <- NA
-table(all_data9$flag) #grounds = 154; water = 147
+table(all_data9$latlong_flag) #grounds = 154; water = 147
 
-# add gps_det (gps determination) column
-all_data9$gps_det[which(all_data9$prov_type == "H")] <- "N/A (horticultural)"
-all_data9$gps_det[which(!is.na(all_data9$lat_dd) &
+# add latlong_det (latlong determination) column
+all_data9$latlong_det[which(all_data9$prov_type == "H")] <- "N/A (horticultural)"
+all_data9$latlong_det[which(!is.na(all_data9$lat_dd) &
   !is.na(all_data9$long_dd))] <- "Given"
-all_data9$gps_det[which(all_data9$gps_det == "")] <- NA
-table(all_data9$gps_det)
+all_data9$latlong_det[which(all_data9$latlong_det == "")] <- NA
+table(all_data9$latlong_det)
 # Given     N/A (horticultural)
 # 1734      2660 
 
 # where prov_type is "N/A (horticultural)" but lat-long is given, change to "H?"
   # create new prov type column
-all_data9$prov_type[which(all_data9$gps_det == "Given" &
+all_data9$prov_type[which(all_data9$latlong_det == "Given" &
   all_data9$prov_type == "H")] <- "H?"
 table(all_data9$prov_type)
 #    H   H?    N   NG    U    W    Z
@@ -1453,7 +1453,7 @@ keep_col <- c(
   # key data
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
-  "lat_dd","long_dd","flag","gps_det","uncertainty","all_locality",
+  "lat_dd","long_dd","latlong_flag","latlong_det","uncertainty","all_locality",
   "locality","municipality","county","state","country",
   "latlong_country","assoc_sp",
   # source
@@ -1527,25 +1527,25 @@ write.csv(geo_needs, file.path(main_dir, exsitu_dir,data_out,
 need_geo <- data_sel %>%
   filter((is.na(lat_dd) & prov_type != "H" &
             !is.na(all_locality) & all_locality != "NA") |
-         flag!="")
+         latlong_flag!="")
 nrow(need_geo) #4506
 # add a couple more columns for keeping notes while geolocating
 need_geo$geolocated_by <- NA
-need_geo$gps_notes <- NA
+need_geo$latlong_notes <- NA
 # condense all_locality duplicates
 need_geo <- need_geo %>%
-  group_by(prov_type,lat_dd,long_dd,gps_det,all_locality) %>%
+  group_by(prov_type,lat_dd,long_dd,latlong_det,all_locality) %>%
   mutate(UID = paste0(UID,collapse=" | "),
          inst_short = paste0(unique(inst_short),collapse=" | "),
          taxon_name_accepted = paste0(unique(taxon_name_accepted),
                                       collapse=" | ")) %>%
   ungroup() %>%
   distinct(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
-           uncertainty,gps_det,geolocated_by,gps_notes,all_locality,county,
-           state,country,flag) %>%
+           uncertainty,latlong_det,geolocated_by,latlong_notes,all_locality,county,
+           state,country,latlong_flag) %>%
   select(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
-         uncertainty,gps_det,geolocated_by,gps_notes,all_locality,county,
-         state,country,flag)
+         uncertainty,latlong_det,geolocated_by,latlong_notes,all_locality,county,
+         state,country,latlong_flag)
 nrow(need_geo) #2907
 head(need_geo)
 # optionally, flag records for taxa that are highest priority for geolocating;
@@ -1591,25 +1591,25 @@ geo_raw <- read.csv(file.path(main_dir, exsitu_dir,data_out,
   header = T, colClasses="character")
 head(geo_raw)
   # check this is just NA and no "priority" records that are not geolocated
-unique(geo_raw[which(is.na(geo_raw$gps_det)),"priority"])
+unique(geo_raw[which(is.na(geo_raw$latlong_det)),"priority"])
 
 # add geolocated coordinates to ex situ data
   # separate UID row
 geolocated <- separate_rows(geo_raw, UID, sep=" \\| ")
 #OLD: geolocated <- separate_rows(geo_raw, UID, sep="\\|;\\|")
 #OLD: geolocated$UID <- gsub("UCalifornia BGerkeley","UCaliforniaBGBerkeley",geolocated$UID)
-  # keep only edited rows (lat, long, gps_det) and
-  #   records that have gps_det filled in
+  # keep only edited rows (lat, long, latlong_det) and
+  #   records that have latlong_det filled in
 geolocated <- geolocated %>%
-  select(UID,lat_dd,long_dd,gps_det,uncertainty,geolocated_by,gps_notes,
+  select(UID,lat_dd,long_dd,latlong_det,uncertainty,geolocated_by,latlong_notes,
          county,state) %>%
-  filter(!is.na(gps_det))
+  filter(!is.na(latlong_det))
 head(geolocated)
-table(geolocated$gps_det)
+table(geolocated$latlong_det)
   # select geolocated rows in full dataset and remove cols we want to add
 exsitu_geo <- exsitu %>%
   filter(UID %in% geolocated$UID) %>%
-  select(-lat_dd,-long_dd,-gps_det,-uncertainty,-county,-state)
+  select(-lat_dd,-long_dd,-latlong_det,-uncertainty,-county,-state)
     # these two values should be the same:
 nrow(exsitu_geo) #1941
 nrow(geolocated) #1941
@@ -1621,14 +1621,14 @@ exsitu_no_geo <- exsitu %>%
 nrow(exsitu_no_geo)
 exsitu_all <- rbind.fill(exsitu_no_geo,exsitu_geo)
 nrow(exsitu_all)
-table(exsitu_all$gps_det)
+table(exsitu_all$latlong_det)
 
 ## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
 keep_col <- c(
   # key data
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
-  "lat_dd","long_dd","flag","gps_det","geolocated_by","gps_notes",
+  "lat_dd","long_dd","latlong_flag","latlong_det","geolocated_by","latlong_notes",
   "uncertainty","all_locality",
   "locality","municipality","county","state","country",
   "latlong_country","assoc_sp",
@@ -1702,7 +1702,7 @@ geolocate <- need_geo %>%
     locality.string,country,state,county,latitude,longitude,
     correction.status,precision,error.polygon,multiple.results,uncertainty,
     ## metadata to include also
-    taxon_name_acc,inst_short,prov_type,gps_det,geolocated_by,gps_notes,UID) %>%
+    taxon_name_acc,inst_short,prov_type,latlong_det,geolocated_by,latlong_notes,UID) %>%
   # replace NA with "" to make simpler to view in GEOLocate
   replace(., is.na(.), "")
 head(geolocate)
@@ -1741,11 +1741,11 @@ lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
 
 # read in compiled ex situ data
 df <- read.csv(file.path(main_dir,"outputs",
-  "exsitu_compiled_standardized_2021-02-11_firstpassGpsDet.csv"),
+  "exsitu_compiled_standardized_2021-02-11_firstpasslatlongDet.csv"),
   header = T, colClasses="character")
 str(df)
-unique(df$gps_det)
-tail(df[which(df$gps_det == "L"),])
+unique(df$latlong_det)
+tail(df[which(df$latlong_det == "L"),])
 
 # create login: https://www.geonames.org/login
 # https://www.geonames.org/manageaccount

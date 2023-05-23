@@ -332,7 +332,7 @@ all_data <- tidyr::unite(all_data,"coll_year",
 sort(unique(all_data$condition))
 #all_data[which(all_data$condition=="Dead"),]$num_individuals <- "0"
 
-## REMOVE UNUSED COLUMNS (SELECT WHAT YOU WANT TO KEEP)
+## REMOVE UNUSED COLUMNS (SELECT WHAT YOU WANT TO KEEP; UPDATE FOR YOU)
 sort(colnames(all_data))
 keep_col <- c("acc_num","assoc_sp","author","coll_name","coll_num",
   "coll_year","country","county","cultivar","filename",
@@ -357,6 +357,14 @@ all_data$orig_long <- mgsub(all_data$orig_long,
   c("\"","ç","d","'","°","º","Â","¼","،","¡","_","´","*","À","?","`")," ")
 # now replace all non-ascii characters
 all_data <- as.data.frame(lapply(all_data,replace_non_ascii),stringsAsFactors=F)
+
+# add additional necessary columns, some of which are in the optional data we 
+#   add from public databases like Genesys
+all_data$latlong_flag <- NA
+all_data$latlong_det <- NA
+all_data$latlong_uncertainty <- NA
+all_data$geolocated_by <- NA
+all_data$latlong_notes <- NA
 
 ################################################################################
 # 2. [OPTIONAL] Compile Genesys data (genebanks)
@@ -434,13 +442,14 @@ genesys_sel <- genesys %>%
          country = origCty,
          orig_lat = latitude,
          orig_long = longitude,
-         latlong_det = method,
+         latlong_notes = method,
          germ_type = storage,
          orig_source = collSrc,
-         prov_type = sampStat) %>%
+         prov_type = sampStat,
+         latlong_uncertainty = uncertainty) %>%
   select(UID,taxon_full_name,coll_num,coll_year,locality,notes,
-    inst_short,acc_num,infra_rank,country,orig_lat,orig_long,latlong_det,
-    germ_type,orig_source,prov_type,genus,species,uncertainty)
+    inst_short,acc_num,infra_rank,country,orig_lat,orig_long,latlong_notes,
+    germ_type,orig_source,prov_type,genus,species,latlong_uncertainty)
 
 # filter by target taxa & add taxon data
 ## We do this later!
@@ -779,23 +788,8 @@ taxon_list$genus_species <- sapply(taxon_list$taxon_name, function(x)
   # join by taxon name
 all_data4 <- full_join(all_data3,taxon_list)
 table(all_data4$taxon_name_status) # Accepted: 10627 | Synonym: 577 
-### ROUND 2: switch subsp to var & var to subsp
-need_match1 <- all_data4[which(is.na(all_data4$taxon_name_status)),]
-nrow(need_match1) #139565
-  # switch subsp and var
-need_match1$taxon_name <- gsub(" subsp. "," var ",need_match1$taxon_name)
-need_match1$taxon_name <- gsub(" var. "," subsp ",need_match1$taxon_name)
-need_match1$taxon_name <- mgsub(need_match1$taxon_name,
-                              c(" var "," subsp "),c(" var. "," subsp. "),
-                              fixed=T)
-sort(unique(need_match1$taxon_name))
-  # remove columns from first taxon name match
-need_match1 <- need_match1[,1:(ncol(all_data4)-ncol(taxon_list)+1)]
-  # new join
-need_match1 <- left_join(need_match1,taxon_list)
-table(need_match1$taxon_name_status) # Accepted: 1 | Synonym: 0
-### ROUND 3: match just by species name
-need_match2 <- need_match1[which(is.na(need_match1$taxon_name_status)),]
+### ROUND 2: match just by species name
+need_match2 <- all_data4[which(is.na(all_data4$taxon_name_status)),]
 nrow(need_match2) #139564
     # remove columns from first taxon name match
 need_match2 <- need_match2[,1:(ncol(all_data4)-ncol(taxon_list)+1)]
@@ -810,9 +804,7 @@ need_match2$genus_species <- paste(need_match2$genus,need_match2$species)
 need_match2 <- left_join(need_match2,taxon_list_sp); nrow(need_match2)
   # bind together new matches and previously matched
 matched1 <- all_data4[which(!is.na(all_data4$taxon_name_status)),]
-matched2 <- need_match1[which(!is.na(need_match1$taxon_name_status)),]
-matched <- rbind(matched1,matched2)
-all_data4 <- rbind(matched,need_match2)
+all_data4 <- rbind(matched1,need_match2)
   table(all_data4$taxon_name_status) # Accepted: 10943 | Synonym: 580
   # see how many rows have taxon name match
 nrow(all_data4[which(!is.na(all_data4$taxon_name_status)),]) #11523
@@ -889,30 +881,7 @@ all_data6 <- all_data5
 # 6. Standardize important columns
 ################################################################################
 
-## KEEP ONLY NECESSARY COLUMNS
-#   change this as needed based on the columns you want
-keep_col <- c(
-  # key data
-  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
-  # locality
-  "orig_lat","orig_long","locality","municipality","county","state","country",
-  "latlong_det","uncertainty","assoc_sp",
-  # source
-  "orig_source","lin_num","coll_name","coll_num","coll_year",
-  # material info
-  "num_indiv","germ_type","garden_loc","rec_as","rec_date",
-  # other metadata
-  "notes","filename","submission_year","data_source",#"dataset_year",
-  # taxon name details
-  "taxon_full_name_orig","taxon_full_name_concat",
-  "genus","species","infra_rank","infra_name","hybrid","cultivar",
-  "taxon_name_status","taxon_verif","author",
-  # OPTIONAL additional taxon metadata
-  "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
-)
-all_data7 <- all_data6[,keep_col]
-
-# add institution metadata to data
+# add institution metadata
 str(inst_data)
   # SELECT COLUMNS YOU WANT ADDED TO ALL DATA:
 inst_data <- inst_data %>%
@@ -920,7 +889,7 @@ inst_data <- inst_data %>%
   arrange(inst_lat) %>%
   distinct(inst_short,.keep_all=T) %>%
   arrange(inst_short); inst_data
-all_data7 <- left_join(all_data7,inst_data)
+all_data7 <- left_join(all_data6,inst_data)
 str(all_data7)
 
 ##
@@ -1181,12 +1150,13 @@ on_land[which(on_land$COUNTRY == "Antarctica"),c("lat_dd","long_dd")] <-
   on_land[which(on_land$COUNTRY == "Antarctica"),c("long_dd","lat_dd")]
 head(on_land)
 # remove columns from first join and join to countries again
-on_land <- on_land %>% select(UID:latlong_flag)
+on_land <- on_land %>% select(-FID,-COUNTRY,-ISO,-COUNTRYAFF,-AFF_ISO,
+                              -SHAPE_Leng,-SHAPE_Area)
 geo_pts_spatial <- vect(cbind(on_land$long_dd,on_land$lat_dd),
   atts=on_land, crs=crdref)
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
 on_land <- geo_pts %>%
-  select(UID:latlong_flag,COUNTRY) %>%
+  select(-FID,-ISO,-COUNTRYAFF,-AFF_ISO,-SHAPE_Leng,-SHAPE_Area) %>%
   rename(latlong_country = COUNTRY)
 on_land <- as.data.frame(on_land)
 nrow(on_land) #1587
@@ -1328,13 +1298,43 @@ table(all_data9$data_source)
 ##      so that everything is (hopefully) at the accession-level
 ##
 
+# preserve original acc_num before removing individual signifiers in a minute
+all_data9$orig_acc_num <- all_data9$acc_num
+
+## KEEP ONLY NECESSARY COLUMNS
+#   change this as needed based on the columns you want;
+keep_col <- c(
+  # key data
+  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
+  # locality
+  "lat_dd","long_dd","latlong_flag","latlong_det","latlong_uncertainty",
+  "geolocated_by","latlong_notes",
+  "all_locality","locality","municipality","county","state","country",
+  "latlong_country","assoc_sp",#"habitat",
+  # source
+  "orig_source","lin_num","coll_name","coll_num","coll_year",
+  # material info
+  "num_indiv","germ_type","garden_loc","rec_as",
+  # other metadata
+  "notes","filename","submission_year","data_source",#"condition","dataset_year","private",
+  # taxon name details
+  "taxon_name","taxon_full_name_orig","taxon_full_name_concat",
+  "genus","species","infra_rank","infra_name","hybrid","cultivar",
+  "taxon_name_status","taxon_verif",#"author","trade_name",
+  # institution metadata
+  "inst_country","inst_lat","inst_long","inst_type",
+  # original versions of columns, for reference
+  "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
+  # OPTIONAL additional taxon metadata
+  "iucnredlist_category","natureserve_rank"#,"taxon_region"
+)
+all_data9 <- all_data9[,keep_col]
+
 # save version without duplicates combined, in cases needed for reference
-write.csv(all_data9, file.path(main_dir, exsitu_dir,data_out,
+write.csv(all_data9, file.path(main_dir, exsitu_dir, data_out,
                               paste0("ExSitu_Compiled_No-Dups-Combined_", 
                                      Sys.Date(), ".csv")),row.names = F)
 
-# preserve original acc_num before removing individual signifiers
-all_data9$orig_acc_num <- all_data9$acc_num
 # fill any spaces in acc_num with dashes
 all_data9$acc_num <- gsub(" ","-",all_data9$acc_num)
 
@@ -1448,31 +1448,7 @@ nrow(all_data9) #8380
 # 7. Summary statistics
 ################################################################################
 
-## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
-keep_col <- c(
-  # key data
-  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
-  # locality
-  "lat_dd","long_dd","latlong_flag","latlong_det","uncertainty","all_locality",
-  "locality","municipality","county","state","country",
-  "latlong_country","assoc_sp",
-  # source
-  "orig_source","lin_num","coll_name","coll_num","coll_year",
-  # material info
-  "num_indiv","germ_type","garden_loc","rec_as",
-  # other metadata
-  "notes","filename","submission_year","data_source",#"dataset_year",
-  # taxon name details
-  "taxon_full_name_orig","taxon_full_name_concat",
-  "genus","species","infra_rank","infra_name","hybrid","cultivar",
-  "taxon_name_status","taxon_verif","author",
-  # institution metadata
-  "inst_country","inst_lat","inst_long","inst_type",
-  # original versions of columns, for reference
-  "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
-  # OPTIONAL additional taxon metadata
-  "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
-)
+## SELECT ONLY THE COLUMNS YOU WANT one last time (see keep_col object created above)
 data_sel <- all_data9[,keep_col]
 
 # write file
@@ -1529,9 +1505,6 @@ need_geo <- data_sel %>%
             !is.na(all_locality) & all_locality != "NA") |
          latlong_flag!="")
 nrow(need_geo) #4506
-# add a couple more columns for keeping notes while geolocating
-need_geo$geolocated_by <- NA
-need_geo$latlong_notes <- NA
 # condense all_locality duplicates
 need_geo <- need_geo %>%
   group_by(prov_type,lat_dd,long_dd,latlong_det,all_locality) %>%
@@ -1541,11 +1514,11 @@ need_geo <- need_geo %>%
                                       collapse=" | ")) %>%
   ungroup() %>%
   distinct(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
-           uncertainty,latlong_det,geolocated_by,latlong_notes,all_locality,county,
-           state,country,latlong_flag) %>%
+           latlong_uncertainty,latlong_det,geolocated_by,latlong_notes,
+           all_locality,county,state,country,latlong_flag) %>%
   select(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
-         uncertainty,latlong_det,geolocated_by,latlong_notes,all_locality,county,
-         state,country,latlong_flag)
+         latlong_uncertainty,latlong_det,geolocated_by,latlong_notes,
+         all_locality,county,state,country,latlong_flag)
 nrow(need_geo) #2907
 head(need_geo)
 # optionally, flag records for taxa that are highest priority for geolocating;
@@ -1601,15 +1574,15 @@ geolocated <- separate_rows(geo_raw, UID, sep=" \\| ")
   # keep only edited rows (lat, long, latlong_det) and
   #   records that have latlong_det filled in
 geolocated <- geolocated %>%
-  select(UID,lat_dd,long_dd,latlong_det,uncertainty,geolocated_by,latlong_notes,
-         county,state) %>%
+  select(UID,lat_dd,long_dd,latlong_det,latlong_uncertainty,geolocated_by,
+         latlong_notes,county,state) %>%
   filter(!is.na(latlong_det))
 head(geolocated)
 table(geolocated$latlong_det)
   # select geolocated rows in full dataset and remove cols we want to add
 exsitu_geo <- exsitu %>%
   filter(UID %in% geolocated$UID) %>%
-  select(-lat_dd,-long_dd,-latlong_det,-uncertainty,-county,-state)
+  select(-lat_dd,-long_dd,-latlong_det,-latlong_uncertainty,-county,-state)
     # these two values should be the same:
 nrow(exsitu_geo) #1941
 nrow(geolocated) #1941
@@ -1624,13 +1597,15 @@ nrow(exsitu_all)
 table(exsitu_all$latlong_det)
 
 ## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
+# this is the same as the version created above in step 6H, just copying here
+#   for easy access if not running the whole script at once
 keep_col <- c(
   # key data
   "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
-  "lat_dd","long_dd","latlong_flag","latlong_det","geolocated_by","latlong_notes",
-  "uncertainty","all_locality",
-  "locality","municipality","county","state","country",
+  "lat_dd","long_dd","latlong_flag","latlong_det","latlong_uncertainty",
+  "geolocated_by","latlong_notes",
+  "all_locality","locality","municipality","county","state","country",
   "latlong_country","assoc_sp",
   # source
   "orig_source","lin_num","coll_name","coll_num","coll_year",
@@ -1639,7 +1614,7 @@ keep_col <- c(
   # other metadata
   "notes","filename","submission_year","data_source",#"dataset_year",
   # taxon name details
-  "taxon_full_name_orig","taxon_full_name_concat",
+  "taxon_name","taxon_full_name_orig","taxon_full_name_concat",
   "genus","species","infra_rank","infra_name","hybrid","cultivar",
   "taxon_name_status","taxon_verif","author",
   # institution metadata

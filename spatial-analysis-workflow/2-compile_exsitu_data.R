@@ -594,6 +594,10 @@ nrow(all_data); nrow(all_data2) #170639 ; 157662
 ### CHECK OUT THE HYBRID COLUMN ###
 sort(unique(all_data2$hybrid))
 # standardize so only one hybrid symbol is used ( x )
+## NOTE that this is only really necessary if you have a hybrid in your target
+#   taxa list. If you don't, all you need to do is make sure there is nothing
+#   in the hybrid column that does not mark the record as a hybrid (e.g. 
+#   "species") and remove that text if these is.
 all_data2$hybrid <- mgsub(all_data2$hybrid,
   c(" A ","^A ","^A$"," X ","^X"," _ ","^_ ","^_$","^1$","\\*","^H$","^hyb$","Hybrid"),
   " x ", fixed=F)
@@ -889,20 +893,20 @@ all_data6 <- all_data5
 #   change this as needed based on the columns you want
 keep_col <- c(
   # key data
-  "UID","inst_short","taxon_name_accepted","acc_num","prov_type","num_indiv",
+  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
   "orig_lat","orig_long","locality","municipality","county","state","country",
   "gps_det","uncertainty","assoc_sp",
   # source
   "orig_source","lin_num","coll_name","coll_num","coll_year",
   # material info
-  "germ_type","garden_loc","rec_as","rec_date",
+  "num_indiv","germ_type","garden_loc","rec_as","rec_date",
   # other metadata
   "notes","filename","submission_year","data_source",#"dataset_year",
   # taxon name details
   "taxon_full_name_orig","taxon_full_name_concat",
-  "genus","hybrid","species","infra_rank","infra_name","cultivar",
-  "taxon_name_status","author","taxon_verif",
+  "genus","species","infra_rank","infra_name","hybrid","cultivar",
+  "taxon_name_status","taxon_verif","author",
   # OPTIONAL additional taxon metadata
   "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
 )
@@ -1447,7 +1451,7 @@ nrow(all_data9) #8380
 ## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
 keep_col <- c(
   # key data
-  "UID","inst_short","taxon_name_accepted","acc_num","prov_type","num_indiv",
+  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
   # locality
   "lat_dd","long_dd","flag","gps_det","uncertainty","all_locality",
   "locality","municipality","county","state","country",
@@ -1455,13 +1459,13 @@ keep_col <- c(
   # source
   "orig_source","lin_num","coll_name","coll_num","coll_year",
   # material info
-  "germ_type","garden_loc","rec_as",
+  "num_indiv","germ_type","garden_loc","rec_as",
   # other metadata
   "notes","filename","submission_year","data_source",#"dataset_year",
   # taxon name details
   "taxon_full_name_orig","taxon_full_name_concat",
-  "genus","hybrid","species","infra_rank","infra_name","cultivar",
-  "taxon_name_status","author","taxon_verif",
+  "genus","species","infra_rank","infra_name","hybrid","cultivar",
+  "taxon_name_status","taxon_verif","author",
   # institution metadata
   "inst_country","inst_lat","inst_long","inst_type",
   # original versions of columns, for reference
@@ -1602,8 +1606,6 @@ geolocated <- geolocated %>%
   filter(!is.na(gps_det))
 head(geolocated)
 table(geolocated$gps_det)
-      #   L     C    G    X
-      #   289   62   259   1331
   # select geolocated rows in full dataset and remove cols we want to add
 exsitu_geo <- exsitu %>%
   filter(UID %in% geolocated$UID) %>%
@@ -1620,6 +1622,34 @@ nrow(exsitu_no_geo)
 exsitu_all <- rbind.fill(exsitu_no_geo,exsitu_geo)
 nrow(exsitu_all)
 table(exsitu_all$gps_det)
+
+## FINAL VERSION: SELECT ONLY THE COLUMNS YOU WANT
+keep_col <- c(
+  # key data
+  "UID","inst_short","taxon_name_accepted","acc_num","prov_type",
+  # locality
+  "lat_dd","long_dd","flag","gps_det","geolocated_by","gps_notes",
+  "uncertainty","all_locality",
+  "locality","municipality","county","state","country",
+  "latlong_country","assoc_sp",
+  # source
+  "orig_source","lin_num","coll_name","coll_num","coll_year",
+  # material info
+  "num_indiv","germ_type","garden_loc","rec_as",
+  # other metadata
+  "notes","filename","submission_year","data_source",#"dataset_year",
+  # taxon name details
+  "taxon_full_name_orig","taxon_full_name_concat",
+  "genus","species","infra_rank","infra_name","hybrid","cultivar",
+  "taxon_name_status","taxon_verif","author",
+  # institution metadata
+  "inst_country","inst_lat","inst_long","inst_type",
+  # original versions of columns, for reference
+  "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
+  # OPTIONAL additional taxon metadata
+  "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
+)
+exsitu_all <- exsitu_all[,keep_col]
 
 # write final file
 write.csv(exsitu_all, file.path(main_dir, exsitu_dir, data_out,

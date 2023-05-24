@@ -21,7 +21,7 @@
 # Use the following line to check your "nodename"
 #Sys.info()[4]
 
-## For Emily Beckman Bruns:
+## For Emily Bruns:
 if (Sys.info()[4] == "Africa.local") {
   # main working directory
   main_dir <- "/Users/emily/Library/CloudStorage/GoogleDrive-ebeckman@mortonarb.org/Shared drives/Global Tree Conservation Program/4. GTCP_Projects/Gap Analyses/User Guide/Supporting documents/Example_spatial-analysis-workflow"

@@ -78,7 +78,7 @@ if(!dir.exists(file.path(main_dir, taxa_dir, output_dir)))
   # Move all download(s) to your "taxa_metadata" folder (in target_taxa folder)
 
 # read in and compile GTS data
-file_list <- list.files(path = file.path(main_dir,taxa_dir),
+file_list <- list.files(path = file.path(main_dir,taxa_dir,output_dir),
   pattern = "globaltreesearch_results", full.names = T)
 file_dfs <- lapply(file_list, read.csv, colClasses = "character",
   na.strings=c("","NA"),strip.white=T)
@@ -101,7 +101,7 @@ spp_countries <- as.data.frame(sort(unique(str_trim(
   gts_all$native_distribution, side = c("both")))))
 spp_countries
 
-# use countrycode package to translate country codes from the country names
+# use countrycode package to translate to country codes from the country names
 country_set <- as.data.frame(sort(unique(gts_all$native_distribution))) %>%
   add_column(iso3c = countrycode(sort(unique(gts_all$native_distribution)),
       origin="country.name", destination="iso3c")) %>%
@@ -112,6 +112,11 @@ country_set <- as.data.frame(sort(unique(gts_all$native_distribution))) %>%
   add_column(fips = countrycode(sort(unique(gts_all$native_distribution)),
       origin="country.name", destination="fips"))
 names(country_set)[1] <- "country_name"
+  # a warning message may say "some values were not matched unambiguously"
+  # you can look at these if you'd like (examples below):
+#country_set[which(country_set$country_name == "Bonaire, Sint Eustatius and Saba"),]
+#country_set[which(country_set$country_name == "Curaçao"),]
+#country_set[which(country_set$country_name == "South Sudan"),]
 
 # add country codes to GTS native distribution data
 gts_list$gts_native_dist_iso2c <- gts_list$native_distribution
@@ -119,18 +124,44 @@ gts_list$gts_native_dist_iso2c <- mgsub(gts_list$gts_native_dist_iso2c,
   array(as.character(country_set$country_name)),
   array(as.character(country_set$iso2c)))
 names(gts_list)[4] <- "gts_native_dist"
-head(gts_list)
 
-# add country codes to the taxon list by matching to GTS
-# match to accepted taxon names
-taxon_list <- left_join(taxon_list, gts_list[,c(2,4,5)],
-  by=c("taxon_name_accepted" = "taxon"))
+# create GTS dataframe for joining to our taxa list
+gts_add <- gts_list %>%
+  select(taxon,gts_native_dist,gts_native_dist_iso2c)
+gts_add$gts_species <- gts_add$taxon
+head(gts_add)
+
+# see which of your target taxa have GTS data or not
+# match to taxon names
+taxon_test <- left_join(taxon_list, gts_add, by=c("taxon_name" = "taxon"))
 head(taxon_list)
 
-# see which taxa have no GTS data
-no_match <- taxon_list[which(is.na(
-  taxon_list$gts_native_dist)),]$taxon_name_acc
+# see which of your accepted target taxa have no GTS data
+no_match <- taxon_test[
+  which(is.na(taxon_test$gts_native_dist) &
+          taxon_test$taxon_name_status == "Accepted"),]$taxon_name_accepted
 no_match
+
+# see if any of your synonyms matched GTS data
+syn_match <- taxon_test[
+  which(!is.na(taxon_test$gts_native_dist) &
+          taxon_test$taxon_name_status == "Synonym"),]$taxon_name
+syn_match
+
+# finally, add GTS data to your taxon list
+taxon_list <- left_join(taxon_list, gts_add, 
+                        by=c("taxon_name_accepted" = "taxon"))
+
+# note that we don't automatically add the "syn_match" matches; for example, 
+# if Querucs montana is your accepted name but there is only GTS data for it's 
+# synonym Quercus prinus, then the GTS data will not be added to your taxon list
+# (we only match to *accepted* names); if you'd like to add GTS data found for 
+# synonyms, you can do it manually following this example:
+#add <- taxon_test %>% 
+#  filter(taxon_name == "Quercus prinus") %>%
+#  select(gts_native_dist,gts_native_dist_iso2c,gts_species)
+#taxon_list[which(taxon_list$taxon_name_accepted == "Quercus montana"),
+#           c("gts_native_dist","gts_native_dist_iso2c","gts_species")] <- add
 
 ################################################################################
 # Get IUCN Red List (RL) native country data
@@ -184,7 +215,7 @@ rl_list <- full_join(rl_native[,c(1,4,3)],rl_introduced[,c(1,4,3)])
 taxon_list <- left_join(taxon_list, rl_list, by="taxon_name_accepted")
 
 # see which species have no RL data
-no_match <- taxon_list[which(is.na(taxon_list$rl_native_dist)),]$taxon_name_acc
+no_match <- taxon_list[which(is.na(taxon_list$rl_native_dist)),]$taxon_name_accepted
 no_match
 
 ################################################################################

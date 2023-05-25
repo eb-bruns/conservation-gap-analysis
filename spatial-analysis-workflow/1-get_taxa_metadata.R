@@ -61,6 +61,12 @@ nrow(taxon_list) #45
 # see target genus/genera name(s) - you'll use these in a minute
 unique(separate(taxon_list,taxon_name,into="genus",extra="drop")[1])
 
+# in case you're running this again, just keep the original columns:
+taxon_list <- taxon_list %>% 
+    select(taxon_name,taxon_name_accepted,taxon_name_status,
+           natureserve_rank #add other manually-added columns here as needed
+           ) 
+
 # create folder for files used in / created by this script
 output_dir <- "taxa_metadata"
 if(!dir.exists(file.path(main_dir, taxa_dir, output_dir)))
@@ -329,6 +335,10 @@ taxon_list <- taxon_list %>%
          gts_native_dist,gts_native_dist_iso2c,gts_taxon_name,
          manual_native_dist,manual_native_dist_iso2c)
 
+# replace NA with empty string, to be sure NA is not confused with a country code
+taxon_list[is.na(taxon_list)] <- ""
+head(taxon_list)
+
 # write file
-write.csv(taxon_list, file.path(main_dir,taxa_dir,
-    "target_taxa_with_synonyms.csv"),row.names=F)
+write.csv(taxon_list, file.path(main_dir, taxa_dir,
+    "target_taxa_with_synonyms.csv"), row.names=F)

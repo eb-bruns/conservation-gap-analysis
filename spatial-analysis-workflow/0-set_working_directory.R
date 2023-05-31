@@ -78,6 +78,11 @@ if(!dir.exists(file.path(main_dir, gis_dir)))
 exsitu_dir <- "exsitu_data"
 if(!dir.exists(file.path(main_dir, exsitu_dir)))
   dir.create(file.path(main_dir, exsitu_dir), recursive=T)
+if(!dir.exists(file.path(main_dir, exsitu_dir, "raw_exsitu_data")))
+  dir.create(file.path(main_dir, exsitu_dir, "raw_exsitu_data"), recursive=T)
+if(!dir.exists(file.path(main_dir, exsitu_dir, "standardized_exsitu_data")))
+  dir.create(file.path(main_dir, exsitu_dir, "standardized_exsitu_data"), recursive=T)
+
 # you will add folders and files here when you gather and process ex situ data
 
 occ_dir <- "occurrence_data"

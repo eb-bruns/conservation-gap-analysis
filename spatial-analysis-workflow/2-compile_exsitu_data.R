@@ -32,7 +32,7 @@
 #    "Processing ex situ data" tab in Gap-analysis-workflow_metadata workbook
 #
 # 3. target_taxa_with_synonyms.csv
-#    List of target taxa and synonyms; see example in the "Target species list"
+#    List of target taxa and synonyms; see example in the "Target taxa list"
 #    tab in Gap-analysis-workflow_metadata workbook
 #
 # 4. (optionally) Accession-level data downloads from two international crop 
@@ -45,8 +45,9 @@
 #
 # 5. UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp
 #    World country boundaries used to add the lat-long country for each record
-#    and to check if the given coordinate is in water; layer can be downloaded
+#    and to check if the given coordinate is in water; shapefile can be downloaded
 #    from https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
+#    and placed in your gis_layers folder
 # 
 # 6. (optionally) ExSitu_Need_Geolocation_YYYY-MM-DD_Geolocated.csv
 #    If you manually geolocate records, you'll use this to update your final 
@@ -119,16 +120,16 @@ distinct <- dplyr::distinct
 # Set working directory
 ################################################################################
 
-# either set manually:
-#main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/CWR North America Gap Analysis/Gap-Analysis-Mapping"
-
-# or use 0-set_working_directory.R script:
-source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/1-set_working_directory.R")
-main_dir
+# use 0-set_working_directory.R script:
+source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 # set folders where you have raw data (in) and want processed data to go (out)
 data_in <- "raw_exsitu_data"
 data_out <- "standardized_exsitu_data"
+
+# create output folder if not already present
+if(!dir.exists(file.path(main_dir, exsitu_dir, data_out)))
+dir.create(file.path(main_dir, exsitu_dir, data_out), recursive=T)
 
 ################################################################################
 # Load functions
@@ -138,48 +139,47 @@ data_out <- "standardized_exsitu_data"
 read.exsitu.csv <- function(path,submission_year){
   # create list of paths to ex situ accessions CSV files in folder
   file_list <- list.files(path=path,pattern=".csv",full.names=TRUE)
-  # read in each csv in path list to create list of dataframes
+  # read in each csv in path list to create list of data frames
   file_dfs <- lapply(file_list,read.csv,header=TRUE,fileEncoding="LATIN1",
     strip.white=TRUE,colClasses="character",na.strings=c("","NA"))
   print(paste0("Number of files: ",length(file_dfs)))
     #sapply(file_dfs, nrow) # can look at number of rows in each csv
+  # for each file, make some edits...
   for(file in seq_along(file_dfs)){
     df <- file_dfs[[file]]
-    # add file name as column, to record home institution for each record
-    df$filename <- rep(file_list[file],nrow(df))
-    # remove file path portion
-    df$filename <- mgsub(df$filename,c(paste0(path,"/"),".csv"),"")
+    # if there is no inst_short provided, add based on the file name
+    if(length(df$inst_short) == 0){
+      df$inst_short <- rep(mgsub(file_list[file],c(paste0(path,"/"),".csv"),""),nrow(df))
+    }
+    # add file name as column, to record the name of the file (often the same as
+    #   inst_short, but different if from a 'parent R file' w/ mult. institutions)
+    df$filename <- rep(mgsub(file_list[file],c(paste0(path,"/"),".csv"),""),nrow(df))
     # add year of submission
     df$submission_year <- submission_year
-    # remove extra blank columns
+    # remove extra blank columns that may be present
     t <- grepl("^X",names(df))
-    if(length(unique(t))>1){
-      #print(df$filename[1])
-      df <- df[, -grep("^X", names(df))]
-    }
+    if(length(unique(t))>1){ df <- df[, -grep("^X", names(df))] }
     # replace strange characters in column names (arise from saving?)
     names(df) <- gsub(x = names(df), pattern = "ï\\.\\.", replacement = "")
     # add accession number if there isn't one
     if("acc_num" %in% names(df) & nrow(df[which(is.na(df$acc_num)),]) > 0){
       df[which(is.na(df$acc_num)),]$acc_num <- paste0("added",
         sprintf("%04d", 1:nrow(df[which(is.na(df$acc_num)),])))
-      #print(nrow(df))
-    } else if ("acc_no" %in% names(df) & nrow(df[which(is.na(df$acc_no)),]) > 0){
-      df[which(is.na(df$acc_no)),]$acc_no <- paste0("added",
-        sprintf("%04d", 1:nrow(df[which(is.na(df$acc_no)),])))
-      #print(nrow(df))
-    } else if (!("acc_num" %in% names(df)) & !("acc_no" %in% names(df))){
-      df$acc_num <- paste0("added", sprintf("%04d", 1:nrow(df)))
-      #print(nrow(df))
-    } else {
-      #print(paste("NO ACC NUM EDITS:",df$filename[1]))
-    }
-    # replace old df with new df
+    }  # if you have mis-named acc_num column(s) you need to address that...
+          #} else if ("acc_no" %in% names(df) & nrow(df[which(is.na(df$acc_no)),]) > 0){
+          #  df[which(is.na(df$acc_no)),]$acc_no <- paste0("added",
+          #    sprintf("%04d", 1:nrow(df[which(is.na(df$acc_no)),])))
+          #} else if (!("acc_num" %in% names(df)) & !("acc_no" %in% names(df))){
+          #  df$acc_num <- paste0("added", sprintf("%04d", 1:nrow(df)))
+          #} else {
+          #  print(paste("NO ACC NUM EDITS:",df$filename[1]))
+          #}
+    # replace orig df with new edited df in your list
     file_dfs[[file]] <- df
     #print(head(file_dfs[[file]],n=2))
   }
   # stack all datasets using rbind.fill, which keeps non-matching columns
-  #   and fills with NA; 'Reduce' iterates through and merges with previous
+  # and fills with NA; 'Reduce' iterates through and merges with previous;
   # this may take a few minutes if you have lots of data
   all_data <- Reduce(rbind.fill, file_dfs)
     print(paste0("Number of rows: ",nrow(all_data)))
@@ -191,76 +191,66 @@ read.exsitu.csv <- function(path,submission_year){
 # 1. Read in and stack all ex situ accessions data from survey of collections
 ################################################################################
 
-### FIRST: After receiving accession data from institutions, you need to process
-#   it manually. See here for instructions:
-#   https://docs.google.com/spreadsheets/d/1p5HAS7vIE-3CbQcUmwrnuBGv5324dXy-42Iu6LlbX0E/edit?usp=sharing
-
 # read in data from multiple surveys and stack, or just read in from one folder.
 # this function also adds columns for 1) the file name [often equivalent to the
 # "inst_short" institution nickname] 2) a submission year, 3) an accession
 # number if one isn't given
-### CHANGE BASED ON FOLDER(S) AND YEAR(S) YOU HAVE
-all_data <- read.exsitu.csv(file.path(main_dir,exsitu_dir,data_in,
-                                      "exsitu_standard_column_names"), "2022") #168
+### CHANGE BASED ON FOLDER(S) AND YEAR(S) YOU HAVE...
+all_data <- read.exsitu.csv(file.path(main_dir, exsitu_dir, data_in,
+                                      "exsitu_standard_column_names"), "2022")
 # stack all data if you had multiple years:
 #to_stack <- list(raw_2022,raw_2021,raw_2020,raw_2019,raw_2018,raw_2017)
 #all_data <- Reduce(rbind.fill, to_stack)
 
-### IF APPLICABLE:
+# look at columns
 sort(colnames(all_data))
-  # combine multiple inst_short columns
-#all_data <- tidyr::unite(all_data,"inst_short",
-#  c("inst_short","inst_short2"),
-#  sep=";",remove=T,na.rm=T)
-  # combine multiple taxon name columns
-  # we'll do the rest of the column standardizing later; this is to get genus
-all_data <- tidyr::unite(all_data,"taxon_full_name",
-  c("taxon_full_name","taxon_name_full","taxon.full_name"),
-  sep=";",remove=T,na.rm=T)
 
-# fill in inst_short column with filename if none provided
-all_data$inst_short[is.na(all_data$inst_short)] <-
-  all_data$filename[is.na(all_data$inst_short)]
-# remove rows with no inst_short
+### IF NEEDED, EDIT A FEW COLS (un-comment & update code chunks for your data)...
+  ## combine multiple inst_short columns
+#all_data <- tidyr::unite(all_data,"inst_short", c("inst_short","inst_short2"),
+#  sep=";",remove=T,na.rm=T)
+  ## combine multiple taxon name columns (we'll do the rest of the column 
+  ## standardizing later; this is to get genus for a summary table right away)
+#all_data <- tidyr::unite(all_data,"taxon_full_name",
+#  c("taxon_full_name","taxon_name_full","taxon.full_name"),
+#  sep=";",remove=T,na.rm=T)
+
+# remove rows with no inst_short (shouldn't happen, but just in case)
 all_data <- all_data[which(!is.na(all_data$inst_short)),]
-all_data <- all_data[which(all_data$inst_short!="ManualEntry"),]
 
 # read in institution metadata file, for comparing list to data read in
-inst_data <- read.csv(file.path(main_dir, exsitu_dir, data_in,
+inst_data <- read.csv(file.path(main_dir, exsitu_dir,
   "respondent_institution_data_table.csv"), stringsAsFactors = F)
-#inst_data$parent_R_file <- gsub("\\{PARENT\\}","",inst_data$parent_R_file)
-## CHECK ALL INSTITUTIONS ARE PRESENT
-#sort(unique(all_data$inst_short)) #333
-#sort(unique(inst_data$inst_short)) #340
-  ### INSTITUTIONS IN THE DATA BUT NOT IN METADATA TABLE
+## CHECK ALL INSTITUTIONS ARE PRESENT...
+  ### INSTITUTIONS IN THE DATA YOU READ IN BUT NOT IN METADATA TABLE
   # this should be "character(0)"
 unique(all_data$inst_short)[!(unique(all_data$inst_short) %in% 
                                 unique(inst_data$inst_short))]
-  ### INSTITUTIONS IN METADATA TABLE BUT NOT IN THE DATA:
-  # this should just be parent files (have mult institutions),
-  # for example, PCNQuercus
+  ### INSTITUTIONS IN METADATA TABLE BUT NOT IN THE DATA YOU READ IN:
+  # this should just be parent R files (have multiple institutions)
 unique(inst_data$inst_short)[!(unique(inst_data$inst_short) %in% 
                                unique(all_data$inst_short))]
 
 # fill genus column so we can see which datasets have our target genus
   # fill genus column if not already filled
 all_data <- all_data %>% 
-  separate("taxon_full_name","genus_temp",sep=" ",remove=F)
+  separate("taxon_full_name","genus_temp", sep=" ", remove=F)
 all_data[which(is.na(all_data$genus)),]$genus <- 
   all_data[which(is.na(all_data$genus)),]$genus_temp
   # standardize capitalization
 all_data$genus <- str_to_title(all_data$genus)
-  ### FIX GENUS MISSPELLINGS OR ABBREVIATIONS
+  ### IF NEEDED, FIX GENUS MISSPELLINGS OR ABBREVIATIONS...
 sort(unique(all_data$genus))
 #all_data$genus <- mgsub(all_data$genus,
-#  c("^Q$","^Q\\.$","Querces","Quercues","Querucs","Querus","Qurercus","Cyclobalanopsis"),
-#  "Quercus",fixed=F)
+#  c("^Q$","^Q\\.$","Querces","Querucs","Querus","Qurercus","Cyclobalanopsis"),
+#     "Quercus", fixed=F)
 #all_data$taxon_full_name <- mgsub(all_data$taxon_full_name,
-#  c("Q\\.","Cyclobalanopsis"), "Quercus",fixed=F)
+#  c("Q\\.","Cyclobalanopsis"), 
+#     "Quercus", fixed=F)
 
-# remove duplicate data if needed - from previous years or networks
-### UPDATE THIS SECTION BASED ON YOUR SPECIFIC NEEDS; THIS IS FOR QUERCUS 2022:
-nrow(all_data) #25653
+### IF NEEDED, REMOVE DUPLICATE DATA - from previous years or networks...
+### UPDATE THIS SECTION BASED ON YOUR SPECIFIC NEEDS; THIS WAS FOR QUERCUS 2022:
+#nrow(all_data)
 #all_data$file_inst_year <- paste(all_data$filename,all_data$inst_short,all_data$submission_year)
 #
 #  # 1) remove datasets that have no Quercus data (so we know they aren't dups)
@@ -271,7 +261,7 @@ nrow(all_data) #25653
 #yes_Q <- unique(inst_genera[which(grepl("Quercus",inst_genera$genera)),]) %>%
 #  mutate(file_inst_year = paste(filename,inst_short,submission_year))
 #all_data <- all_data %>% filter(file_inst_year %in% yes_Q$file_inst_year)
-#nrow(all_data) #156714
+#nrow(all_data)
 #
 #  # 2) remove old datasets if there is newer data from 2018-2020
 #all_data$inst_and_year <- paste(all_data$inst_short,all_data$submission_year)
@@ -283,7 +273,7 @@ nrow(all_data) #25653
 #remove_dups <- find_dups[which(duplicated(find_dups$inst_short)),]
 #remove_dups <- paste(remove_dups$inst_short,remove_dups$submission_year); remove_dups
 #all_data <- all_data %>% filter(!(inst_and_year %in% remove_dups))
-#nrow(all_data) #127495
+#nrow(all_data)
 #
 #  # 3) if there is duplicate network data, keep only the data direct from garden
 #network_data <- all_data %>% filter(inst_short != filename &
@@ -294,69 +284,57 @@ nrow(all_data) #25653
 #  network_data$inst_short %in% own_data$inst_short),]$file_inst_year)); remove
 #all_data <- all_data %>%
 #  filter(!(file_inst_year %in% remove))
-#nrow(all_data) #126189
+#nrow(all_data)
+
+# remove columns that are completely empty
+not_all_na <- function(x) any(!is.na(x))
+all_data <- all_data %>% select(where(not_all_na))
 
 # check out column names
-  #not_all_na <- function(x) any(!is.na(x))
-  #all_data <- all_data %>% select(where(not_all_na))
 sort(colnames(all_data))
-## IF NEEDED: separate column into multiple
+### IF NEEDED, SEPARATE SINGLE COLUMN INTO MULTIPLE...
 #all_data <- all_data %>% separate("specific",
-#  c("infra_rank_add","infra_name_add"),sep=" ",remove=T,fill="right")
-## IF NEEDED: see which datasets have extraneous columns so you can fix manually
-##  in the raw data as desired; update line below
-#unique(all_data$filename[all_data$locality.1 !=""])
-## IF NEEDED: merge similar columns (you may not need to do this if no schema
-##  mistakes were made when manually editing column names)
-all_data <- tidyr::unite(all_data,"cultivar",
-                         c("cultivar","cultivsr"),
-                         sep="; ",remove=T,na.rm=T)
-all_data <- tidyr::unite(all_data,"genus", 
-                         c("genus","gensu"),
-                         sep="; ",remove=T,na.rm=T)
-all_data <- tidyr::unite(all_data,"hybrid", 
-                         c("hybrid","hyrbid"),
-                         sep="; ",remove=T,na.rm=T)
-all_data <- tidyr::unite(all_data,"notes", 
-                         c("notes","Notes","notes2","inst_short2"),
-                         sep="; ",remove=T,na.rm=T)
-all_data <- tidyr::unite(all_data,"taxon_verif", 
-                         c("taxon_verif","Taxonomic.Verification","taxon_det"),
-                         sep="; ",remove=T,na.rm=T)
-all_data <- tidyr::unite(all_data,"coll_year", 
-                         c("coll_year","coll_date","rec_year","planted_year","rec_date"),
-                         sep="; ",remove=T,na.rm=T)
-## IF NEEDED: rename columns
-#all_data <- all_data %>% rename(latlong_det = coord_notes)
-## IF NEEDED: change # of individuals for rows that say dead/removed, etc.
-sort(unique(all_data$condition))
-#all_data[which(all_data$condition=="Dead"),]$num_individuals <- "0"
+#  c("infra_rank_add","infra_name_add"), sep=" ", remove=T, fill="right")
+### IF NEEDED, FIX MIS-NAMED COLUMNS (mistakes during manual processing)...
+  # you can either see which datasets have the mis-named column & fix manually
+  # in the data file:
+#unique(all_data$filename[all_data$locality.1 != ""])
+  # or you can simply merge similar columns like so (update for you!!)...
+#all_data <- tidyr::unite(all_data,"cultivar",
+#                         c("cultivar","cultivsr"), sep="; ", remove=T, na.rm=T)
+#all_data <- tidyr::unite(all_data,"genus", 
+#                         c("genus","gensu"), sep="; ", remove=T, na.rm=T)
+#all_data <- tidyr::unite(all_data,"hybrid", c("hybrid","hyrbid"),
+#                         sep="; ", remove=T, na.rm=T)
+#all_data <- tidyr::unite(all_data,"notes", 
+#                         c("notes","Notes","notes2","inst_short2"), sep="; ", remove=T, na.rm=T)
 
-## REMOVE UNUSED COLUMNS (SELECT WHAT YOU WANT TO KEEP; UPDATE FOR YOU)
-sort(colnames(all_data))
-keep_col <- c("acc_num","assoc_sp","author","coll_name","coll_num",
-  "coll_year","country","county","cultivar","filename",
-  "garden_loc","genus","germ_type","hybrid","infra_name",
-  "infra_rank","inst_short","lin_num","locality","municipality","notes",
-  "num_indiv","orig_lat","orig_long","orig_source","prov_type","rec_as",
-  "species","state","submission_year","taxon_full_name","taxon_verif")
+### SELECT ONLY THE COLUMNS YOU WANT TO KEEP, BASED ON YOUR OWN DATA & NEEDS...
+keep_col <- c("acc_num","assoc_sp",#"author",
+              "coll_name","coll_num","coll_year",#"condition",
+              "country","county","cultivar",#"dataset_year",
+              "filename","garden_loc","genus","germ_type",#"habitat",
+              "hybrid","infra_name","infra_rank","inst_short","lin_num",
+              "locality","municipality","notes","num_indiv","orig_lat",
+              "orig_long","orig_source",#"private",
+              "prov_type","rec_as","species","state","submission_year",
+              "taxon_full_name","taxon_verif"#,"trade_name"
+              )
 all_data <- all_data[,keep_col]
 
-# remove leading, trailing, and middle (e.g., double space) whitespace,
-#   to prevent future errors
-all_data <- as.data.frame(lapply(all_data, function(x) str_squish(x)),
-  stringsAsFactors=F)
+# remove leading, trailing, and middle (e.g., double space) white space
+all_data <- as.data.frame(lapply(all_data, function(x) str_squish(x)), stringsAsFactors=F)
 # replace "" cells with NA in whole dataset
 all_data[all_data == ""] <- NA
-# add data source colunm
+# add a general data source column
 all_data$data_source <- "ex_situ_BG_survey"
-# first fix some common lat/long character issues before replacing non-ascii
+# fix some common lat/long character issues before replacing non-ascii characters
 all_data$orig_lat <- mgsub(all_data$orig_lat,
   c("\"","ç","d","'","°","º","Â","¼","،","¡","_","´","*","À","?","`")," ")
 all_data$orig_long <- mgsub(all_data$orig_long,
   c("\"","ç","d","'","°","º","Â","¼","،","¡","_","´","*","À","?","`")," ")
 # now replace all non-ascii characters
-all_data <- as.data.frame(lapply(all_data,replace_non_ascii),stringsAsFactors=F)
+all_data <- as.data.frame(lapply(all_data,replace_non_ascii), stringsAsFactors=F)
 
 # add additional necessary columns, some of which are in the optional data we 
 #   add from public databases like Genesys
@@ -372,28 +350,28 @@ all_data$latlong_notes <- NA
 
 ### FIRST, download data from Genesys [Global Crop Diversity Trust]:
 # Go to https://www.genesys-pgr.org/a/overview
-# Search for target genus/genera (in the TAXONOMY tab on the left) then click
-# "APPLY FILTERS" at the top left.
+# Search for each target genus/genera in the TAXONOMY tab on the left (remember
+#   synonym genera, if applicable), then click "APPLY FILTERS" at the top left.
 # Click the "ACCESSIONS" tab in the top bar, then click "DOWNLOAD ZIP" on the
-# right.
-# Move the downloaded folder to your ex situ working directory (exsitu_dir) and
-# rename to "genesys-accessions"
+#   right.
+# Move the downloaded folder to your "exsitu_data > raw_exsitu_data" folder and 
+#   rename to "genesys-accessions"
 # You can view field metadata here: https://www.genesys-pgr.org/documentation/basics
 
-# load in data
+# load data
   # collection site description
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/coll.csv")
   # I think the "Found and resolved improper quoting" warning is ok
 gen_col <- data.table::fread(file = genPath, header = TRUE)
   str(gen_col)
-  nrow(gen_col) ; length(unique(gen_col$genesysId)) #333
+  nrow(gen_col) ; length(unique(gen_col$genesysId))
   # metadata about record
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/core.csv")
 gen_core <- data.table::fread(genPath, header = TRUE)
   str(gen_core)
-  nrow(gen_core) ; length(unique(gen_core$genesysId)) #428
+  nrow(gen_core) ; length(unique(gen_core$genesysId))
   # spatial info
-  #   for some reason the headers dont read in correctly with fread;
+  #   for some reason the headers don't read in correctly with fread;
   #   will use read.csv just to get the headers and add them to the fread df
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/geo.csv")
 gen_geo <- data.table::fread(genPath, header = TRUE)
@@ -404,31 +382,16 @@ gen_geo_head <- read.csv(genPath)
 gen_geo <- gen_geo %>% select(-V8) # remove the last column (nothing in it)
 colnames(gen_geo) <- colnames(gen_geo_head)
   str(gen_geo)
-  nrow(gen_geo) ; length(unique(gen_geo$genesysId)) #427
+  nrow(gen_geo) ; length(unique(gen_geo$genesysId))
 
 # combine all dataframes
 genesys <- Reduce(full_join,list(gen_col,gen_core,gen_geo)) #,gen_names
 str(genesys); nrow(genesys)
-# create taxon name column
-## We don't need to do this here since we work with all taxon names below!
-  # fix up infra rank/name column a little
-#sort(unique(genesys$subtaxa))
-#genesys$subtaxa <- mgsub(genesys$subtaxa,
-#  c("\\(l.\\) dun.","^s$","~sp","^a$","^i$","^m$"),"",fixed=F)
-#genesys$subtaxa <- mgsub(genesys$subtaxa,c("var.","subsp."),c("var. ","subsp. "))
-#genesys$subtaxa <- str_squish(genesys$subtaxa)
-#sort(unique(genesys$subtaxa))
-  # create full name
-#genesys$taxon_full_name <- paste(genesys$genus,genesys$species,genesys$subtaxa)
-#genesys$taxon_name <- str_squish(genesys$taxon_name)
-  # replace hybrid x with +
-#genesys$taxon_name <- gsub(" x "," +",genesys$taxon_name)
-#sort(unique(genesys$taxon_name))
   # add 'Genesys' to ID
 genesys$UID <- paste0("Genesys-",genesys$genesysId)
   # paste some similar columns together
 genesys <- tidyr::unite(genesys,"coll_year",
-  c("collDate","acqDate"),sep=";",remove=T,na.rm=T)
+  c("collDate","acqDate"), sep=";", remove=T, na.rm=T)
 
 # rename columns to match ex situ data and select only those we need
 genesys_sel <- genesys %>%
@@ -451,86 +414,49 @@ genesys_sel <- genesys %>%
     inst_short,acc_num,infra_rank,country,orig_lat,orig_long,latlong_notes,
     germ_type,orig_source,prov_type,genus,species,latlong_uncertainty)
 
-# filter by target taxa & add taxon data
-## We do this later!
-#genesys_sel <- left_join(genesys_sel,taxon_list)
-#genesys_target <- genesys_sel %>% filter(!is.na(taxon_name_acc))
-#nrow(genesys_target)
-
-# add data source colun
+# add data source column
 genesys_sel$data_source <- "Genesys"
 
 # join to exsitu data
 all_data <- rbind.fill(all_data,genesys_sel)
-nrow(all_data) #104085
+nrow(all_data)
 
-## YOU EITHER NEED TO REMOVE GRIN OR REMOVE US INSTITUTIONS IN GENSYS:
-## To remove US Genesys:
-# US institutions covered by GRIN (I think); we will remove these
-# pulled this list from CWR Gap Analysis 2020 (Khoury et al.)...
-USDAcodes <- c("USA003" ,"USA004", "USA005" ,"USA016" ,"USA020",
-"USA022", "USA026", "USA028", "USA029", "USA042" ,"USA047", "USA049",
-"USA074", "USA108", "USA133", "USA148", "USA151", "USA167", "USA176",
-"USA390", "USA955", "USA956", "USA970", "USA971", "USA995")
-all_data <- all_data %>% filter(!(inst_short %in% USDAcodes))
-## To remove GRIN:
-#all_data <- all_data %>% filter(inst_short != "GRIN_NPGS")
+### IF YOU HAVE DATA FROM THE USDA ARS NATIONAL PLANT GERMPLASM SYSTEM (GRIN)...
+# I think all the US institutions are covered by GRIN, so we'll remove 
+# these; pulled this list from CWR Gap Analysis 2020 (Khoury et al.)... may 
+# need to be refined at some point?
+#USDAcodes <- c("USA003" ,"USA004", "USA005" ,"USA016" ,"USA020",
+#               "USA022", "USA026", "USA028", "USA029", "USA042" ,"USA047",
+#               "USA049", "USA074", "USA108", "USA133", "USA148", "USA151", 
+#               "USA167", "USA176", "USA390", "USA955", "USA956", "USA970", 
+#               "USA971", "USA995")
+#all_data <- all_data %>% filter(!(inst_short %in% USDAcodes))
 
-nrow(all_data) #89588
+nrow(all_data)
 
 ################################################################################
 # 3. [OPTIONAL] Compile WIEWS data (genebanks)
 ################################################################################
 
-# 23 Nov 2022: For some reason the data aren't downloading; skipping this
-# section for Quercus (Genesys gets most of the genebanks anyways).
-
 ### FIRST, download data from WIEWS [FAO's World information and early warning
-# system on plant genetic resources for food and agriculture]:
+#   system on plant genetic resources for food and agriculture]:
 # Go to https://www.fao.org/wiews/data/ex-situ-sdg-251/search/en/?no_cache=1
 # In the "Crop Wild Relatives" dropdown, select "Included".
 # Type your target genus into the "Genus" box and press the "+" button on the
-# right. Add additional target genera like this as needed.
+#   right. Add additional target genera like this as needed.
 # Scroll down and press the magnifying glass icon on the bottom right.
 # Now click the "Download Results" button on the top right.
-# Move the downloaded file to your ex situ working directory (exsitu_dir) and
-# rename to "wiews-exsitu.csv"
+# Move the downloaded folder to your "exsitu_data > raw_exsitu_data" folder and 
+#   rename to "Wiews-Exsitu.csv"
 
 # read in data
-wiewsPath <- file.path(main_dir, exsitu_dir, data_in, "Wiews_Exsitu.csv")
-#wiews <- data.table::fread(wiewsPath, header = TRUE)
-wiews <- read.csv(wiewsPath)
-str(wiews) #95551
+wiews <- read.csv(file.path(main_dir, exsitu_dir, data_in, "Wiews_Exsitu.csv"))
+str(wiews)
 
 # filter out Genesys data
 wiews <- wiews %>%
   filter(Source.of.information != "Genesys (https://www.genesys-pgr.org)")
-nrow(wiews) #81051
-
-# create taxon name column
-## We don't need to do this here since we work with all taxon names below!
-  # Spilt name to get at genus and species
-#wiews$name <- wiews$Taxon
-#wiews <- tidyr::separate(data = wiews, "name",
-#  into =c('genus','spec','sub1','sub2','sub3', 'sub4'),sep=' ')
-#  # from "wiewsTransform.R" by Dan Carver:
-#  #   Function to split full name into taxon/species
-#setSpecies <- function(dataFrame){
-#  if(!is.na(dataFrame$sub1)){
-#    dataFrame$species <- paste(dataFrame$spec,dataFrame$sub1,
-#                               dataFrame$sub2, sep="_")
-#  }
-#  if(is.na(dataFrame$sub1)){
-#    dataFrame$species <- dataFrame$spec
-#  }
-#  return(dataFrame)
-#}
-#wiews2 <- setSpecies(wiews)
-# remove all NA
-#df6 <- str_remove_all(df4$species, 'NA') %>%
-#  str_remove_all("__")
-#df4$species <- df6
-#df4 <- subset(x = df4, select = -c(spec,sub1,sub2) )
+nrow(wiews)
 
 # rename columns to match ex situ data and select only those we need
 wiews_sel <- wiews %>%
@@ -550,72 +476,61 @@ wiews_sel <- wiews %>%
   select(inst_short,acc_num,taxon_full_name,genus,species,rec_date,country,
          prov_type,notes,orig_lat,orig_long,orig_source,germ_type)
 
-# !!! JUST FOR NOW; need to check exact to filter out !!!
-#   US institutions (covered by GRIN?)
-# looks like they are all removed by removing Genesys anyways, so we'll skip
-#wiews_target <- wiews_sel %>% filter(!grepl("USA",inst_short))
-nrow(wiews_sel) #81051
+### IF YOU HAVE DATA FROM THE USDA ARS NATIONAL PLANT GERMPLASM SYSTEM (GRIN)...
+# I think all the US institutions are covered by GRIN, so we'll remove; I'm 
+# not positive this is right... would need to do some digging
+wiews_sel <- wiews_sel %>% filter(!grepl("USA",inst_short))
+nrow(wiews_sel)
 
-# add data source colun
+# add data source column
 wiews_sel$data_source <- "FAO-WIEWS"
 
 # join to exsitu data
 all_data <- rbind.fill(all_data,wiews_sel)
-nrow(all_data) #170639
+nrow(all_data)
 
 ################################################################################
 # 4. Save raw output of compiled data for target genera
-#     (can be used to look for hybrids/cultivars, which are removed in next step)
+#    (can be used to look for hybrids/cultivars, which are removed in next step)
 ################################################################################
 
-# create folder for output data
-if(!dir.exists(file.path(main_dir, exsitu_dir,data_out)))
-  dir.create(file.path(main_dir, exsitu_dir,data_out), recursive=T)
-
+# create new version of data before big edits, so we can more easily go back; 
+# we do this throughout but I'll just mention it here; this does take more 
+# computational power, so if you have a lot of data you may want to skip this 
+# and edit the script to remove
 all_data2 <- all_data
-nrow(all_data2) #126267
 
 # read in target taxa list
 taxon_list <- read.csv(file.path(main_dir, taxa_dir,
                                  "target_taxa_with_synonyms.csv"),
-  header = T, na.strings = c("","NA"),colClasses = "character")
+                       header = T, na.strings = c("","NA"), 
+                       colClasses = "character")
 str(taxon_list)
-#unique(taxon_list$taxon_region)
-  # can select just a specific region if you want
-#taxon_list <- taxon_list %>%
-#  filter(taxon_region == "Mesoamerican" |
-#         taxon_region == "Mesoamerican & US" |
-#         taxon_region == "US")
-nrow(taxon_list) #287
 
-# preserve original taxon name
+# preserve original taxon name before we edit
 all_data2$taxon_full_name_orig <- all_data2$taxon_full_name
 
 # remove rows not in target genus/genera
-  # can either create list manually...
-#target_genera <- c("Quercus")
-  # or pull from target taxa list if you have genus separated...
-target_genera <- unique(taxon_list$genus)
-# filter by genus/genera
+target_genera <- unique(as.character(map(strsplit(taxon_list$taxon_name, split=" "), 1)))
 all_data2 <- all_data2 %>% filter(genus %in% target_genera)
-nrow(all_data); nrow(all_data2) #170639 ; 157662
+nrow(all_data); nrow(all_data2)
 
-### CHECK OUT THE HYBRID COLUMN ###
+### CHECK OUT THE HYBRID COLUMN...
 sort(unique(all_data2$hybrid))
-# standardize so only one hybrid symbol is used ( x )
 ## NOTE that this is only really necessary if you have a hybrid in your target
 #   taxa list. If you don't, all you need to do is make sure there is nothing
 #   in the hybrid column that does not mark the record as a hybrid (e.g. 
-#   "species") and remove that text if these is.
-all_data2$hybrid <- mgsub(all_data2$hybrid,
-  c(" A ","^A ","^A$"," X ","^X"," _ ","^_ ","^_$","^1$","\\*","^H$","^hyb$","Hybrid"),
-  " x ", fixed=F)
+#   "species") and remove that text; the following will need edits !!!...
+# if needed, standardize so only one hybrid symbol is used ( x )
+#all_data2$hybrid <- mgsub(all_data2$hybrid,
+#  c(" A ","^A ","^A$"," X ","^X"," _ ","^_ ","^_$","^1$","\\*","^H$","^hyb$","Hybrid"),
+#  " x ", fixed=F)
 # add "x" at beginning then remove duplicates
-all_data2$hybrid[!is.na(all_data2$hybrid)] <- paste0("x ",all_data2$hybrid[!is.na(all_data2$hybrid)])
-all_data2$hybrid <- str_squish(all_data2$hybrid)
+#all_data2$hybrid[!is.na(all_data2$hybrid)] <- paste0("x ",all_data2$hybrid[!is.na(all_data2$hybrid)])
+#all_data2$hybrid <- str_squish(all_data2$hybrid)
 #all_data2$hybrid <- str_to_lower(all_data2$hybrid)
-all_data2$hybrid <- mgsub(all_data2$hybrid,c("x x","x h$"),"x",fixed=F)
-sort(unique(all_data2$hybrid))
+#all_data2$hybrid <- mgsub(all_data2$hybrid,c("x x","x h$"),"x",fixed=F)
+#sort(unique(all_data2$hybrid))
 
 # create concatenated taxon_full_name column
 all_data2 <- tidyr::unite(all_data2, "taxon_full_name_concat",
@@ -625,12 +540,13 @@ all_data2 <- tidyr::unite(all_data2, "taxon_full_name_concat",
 # when blank, fill taxon_full_name column with concatenated full name
 all_data2[is.na(all_data2$taxon_full_name),]$taxon_full_name <-
   all_data2[is.na(all_data2$taxon_full_name),]$taxon_full_name_concat
-#unique(all_data2$taxon_full_name)
+unique(all_data2$taxon_full_name)
 
-# standardize common hybrid signifiers in taxon_full_name
+# standardize common hybrid signifiers in taxon_full_name; you will need to 
+#   check this works as expected and doesn't leave out an important one
 all_data2$taxon_full_name <- mgsub(all_data2$taxon_full_name,
-  c(" A "," A","_"," X","\\*","×"," \\? ")," x ",fixed=F)
-# make sure the author is separated in taxon_full_name
+  c(" A ","_"," X ","\\*","×"," \\? ")," x ",fixed=F)
+# make sure there is a space b/w the author and taxon name in taxon_full_name
 all_data2$taxon_full_name <- gsub("\\("," (",all_data2$taxon_full_name)
 all_data2$taxon_full_name <- str_squish(all_data2$taxon_full_name)
 unique(all_data2$taxon_full_name)
@@ -648,102 +564,101 @@ gen_summary <- all_data2 %>%
     genera = paste(unique(genera), collapse = '; ')) %>%
   ungroup() %>%
   distinct(inst_short,genera)
-head(as.data.frame(gen_summary),n=30)
-nrow(gen_summary) # number of institutions -- 438
+gen_summary
 # write file
-write.csv(gen_summary, file.path(main_dir, exsitu_dir,data_out,
-                              paste0("Genera_Institutions_Summary_", 
-                                     Sys.Date(), ".csv")),row.names = F)
+write.csv(gen_summary, 
+          file.path(main_dir, exsitu_dir, data_out,
+                    paste0("Genera_Institutions_Summary_", Sys.Date(), ".csv")),
+          row.names = F)
 
 ################################################################################
 # 5. Further standardize taxon name, then keep data for target taxa only
 ################################################################################
 
-# fixing some taxon name issues I noticed:
-all_data2$taxon_full_name <- mgsub(all_data2$taxon_full_name,
-  c("Corylus Acolurnoides","Prunus Ayedoensis","Pyrus (Malus) fusca"),
-  c("Corylus x colurnoides","Prunus x yedoensis","Malus fusca"))
-all_data2$taxon_full_name <- gsub("Prunus virginiata","Prunus virginiana",all_data2$taxon_full_name)
-all_data2$taxon_full_name <- gsub("A "," ",all_data2$taxon_full_name)
+### manually fix taxon name issues you notice...
+#all_data2$taxon_full_name <- mgsub(all_data2$taxon_full_name,
+#  c("Corylus Acolurnoides","Prunus Ayedoensis","Pyrus (Malus) fusca"),
+#  c("Corylus x colurnoides","Prunus x yedoensis","Malus fusca"))
 
-## first change hybrid notation temporarily: remove space so it stays together
+# first change hybrid notation temporarily: remove space so it stays together
 all_data2$taxon_full_name <- gsub(" x "," +",all_data2$taxon_full_name)
 
-# separate out taxon full name and trim whitespace again
+# separate out taxon full name and trim white space again
     # this warning is ok: "Expected 9 pieces. Additional pieces discarded..."
 all_data2 <- all_data2 %>% separate("taxon_full_name",
   c("genus_new","species_new","extra1","extra2",
-    "extra3","extra4","extra5","extra6","extra7"),sep=" ",extra="warn",
-    remove=F,fill="right")
-all_data2 <- as.data.frame(lapply(all_data2,str_squish),stringsAsFactors=F)
+    "extra3","extra4","extra5","extra6","extra7"), sep=" ", extra="warn",
+    remove=F, fill="right")
+all_data2 <- as.data.frame(lapply(all_data2, str_squish), stringsAsFactors=F)
 # replace genus_new with genus, since we fixed that up in the previous section
 all_data2$genus_new <- all_data2$genus
 
-## REMOVE RECORDS WITHOUT SPECIES NAME
+## REMOVE RECORDS WITHOUT SPECIFIC EPITHET
 
 # remove records with no/non-standard specific epithet (mostly cultivars or
-#   'sp.' or questionable '?') by looking in species name column
+#   'sp.' or questionable '?') by looking in species name column;
+# if you WANT cultivars, you'll need to change this!
 all_data3 <- all_data2 %>%
   filter(!grepl("\"",species_new) &
-                !grepl("\'",species_new) &
-                !grepl("\\[",species_new) &
-                !grepl("\\(",species_new) &
-                !grepl("\\.",species_new) &
-                !grepl("[A-Z]",species_new) &
-                !grepl("[0-9]",species_new) &
-                !grepl("\\?",species_new) &
-                !is.na(species_new))
-nrow(all_data3) #150598
+           !grepl("\'",species_new) &
+           !grepl("\\[",species_new) &
+           !grepl("\\(",species_new) &
+           !grepl("\\.",species_new) &
+           !grepl("[A-Z]",species_new) &
+           !grepl("[0-9]",species_new) &
+           !grepl("\\?",species_new) &
+           !is.na(species_new))
+nrow(all_data3)
 # see records removed; can add anything you want to fix to the
-#   "fixing some taxon name issues I noticed" section above:
-sort(unique(anti_join(all_data2,all_data3)$taxon_full_name))
+#   "manually fix taxon name issues you notice" section above and rerun 
+#   starting where you first created all_data2
+sort(unique(suppressMessages(anti_join(all_data2,all_data3))$taxon_full_name))
 
 ## FIND INFRATAXA
 
-## look for infrataxa key words
-# make data in all "extra" columns lower case
+# look for infrataxa key words
+  # make data in all "extra" columns lower case
 sp_col <- grep("^species_new$", colnames(all_data3))
-all_data3[,sp_col:(sp_col+5)] <- as.data.frame(sapply(
-  all_data3[,sp_col:(sp_col+5)], tolower), stringsAsFactors=F)
-# create matrix of all "extra" species name columns, to search for
-#   infraspecific key words
+all_data3[,sp_col:(sp_col+7)] <- as.data.frame(sapply(
+  all_data3[,sp_col:(sp_col+7)], tolower), stringsAsFactors=F)
+  # create matrix of all "extra" species name columns, to search for
+  #   infraspecific key words
 search.col <- matrix(cbind(all_data3$extra1,all_data3$extra2,all_data3$extra3,
   all_data3$extra4,all_data3$extra5,all_data3$extra6,all_data3$extra7),
-  nrow=nrow(all_data3))
-#str(search.col)
-# search the "extra" column matrix for matches to infraspecific key words
+    nrow=nrow(all_data3))
+  # search the "extra" column matrix for matches to infraspecific key words
 matches_i <- which(search.col=="variety"|search.col=="var"|search.col=="var."|
-                  search.col=="v"|search.col=="v."|search.col=="va"|
-                 search.col=="subspecies"|search.col=="subsp"|
-                  search.col=="subsp."|search.col=="ssp"|search.col=="ssp."|
-                  search.col=="subs."|search.col=="spp."|search.col=="sub."|
-                 search.col=="infra"|
-                 search.col=="forma"|search.col=="form"|search.col=="fma"|
-                  search.col=="fo"|search.col=="fo."|search.col=="f"|
-                  search.col=="f.",arr.ind=T)
+                     search.col=="v"|search.col=="v."|
+                   search.col=="subspecies"|search.col=="subsp"|
+                     search.col=="subsp."|search.col=="ssp"|search.col=="ssp."|
+                     search.col=="subs."|search.col=="spp."|search.col=="sub."|
+                     search.col=="infra"|
+                   search.col=="forma"|search.col=="form"|search.col=="fma"|
+                     search.col=="fo"|search.col=="fo."|search.col=="f"|
+                     search.col=="f.",arr.ind=T)
 matches_i[,2] <- matches_i[,2]+sp_col
 # create new infra_rank column and fill with "extra" contents that matched
 #   infraspecific key words
 all_data3$infra_rank_new <- NA
-all_data3$infra_rank_new[matches_i] <- all_data3[matches_i]
-#unique(all_data3$infra_rank_new) # check results
+all_data3[matches_i[,1],"infra_rank_new"] <- all_data3[matches_i]
+unique(all_data3$infra_rank_new) # check results
 
 # create new infra_name column and fill with next column over from "extra"
 #   contents that matched infraspecific key word
 all_data3$infra_name_new <- NA
 matches_i[,2] <- matches_i[,2]+1
-all_data3$infra_name_new[matches_i] <- all_data3[matches_i]
-#sort(unique(all_data3$infra_name_new))
+all_data3[matches_i[,1],"infra_name_new"] <- all_data3[matches_i]
 
 # standardize infraspecific rank names
 all_data3$infra_rank_new <- replace(all_data3$infra_rank_new,
-  grep("^v$|^v.$|^var$|^variety$|^va$",all_data3$infra_rank_new), "var.")
+  grep("^variety$|^var$|^v$|^v.$",all_data3$infra_rank_new), "var.")
 all_data3$infra_rank_new <- replace(all_data3$infra_rank_new,
-  grep("^subspecies$|^subsp$|^ssp$|^ssp.$|^subs.$|^spp.$|^sub.$",
-  all_data3$infra_rank_new), "subsp.")
+  grep("^subspecies$|^subsp$|^ssp$|^ssp.$|^subs.$|^spp.$|^sub.$|^infra$",
+    all_data3$infra_rank_new), "subsp.")
 all_data3$infra_rank_new <- replace(all_data3$infra_rank_new,
  grep("^forma$|^form$|^fma$|^fo$|^fo.$|^f$",all_data3$infra_rank_new), "f.")
-unique(all_data3$infra_rank_new)
+  # names we identified as infraspecific 
+unique(all_data3[which(!is.na(all_data3$infra_rank_new)),"taxon_full_name"])
 
 ## CREATE FINAL TAXON FULL NAME FOR FILTERING
 
@@ -957,6 +872,14 @@ table(all_data7$prov_type)
 ##
 ## B) Number of Individuals
 ##
+
+
+## IF NEEDED: change # of individuals for rows that say dead/removed, etc.
+sort(unique(all_data$condition))
+#all_data[which(all_data$condition=="Dead"),]$num_individuals <- "0"
+
+
+
 
 # make everything lowercase
 all_data7$num_indiv <- str_to_lower(all_data7$num_indiv)

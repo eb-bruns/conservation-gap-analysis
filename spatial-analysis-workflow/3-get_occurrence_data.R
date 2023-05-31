@@ -1217,7 +1217,7 @@ str(exsitu_raw)
 rm(exsitu_raw1,exsitu_raw2)
 # rename columns to fit standard
 exsitu_raw <- exsitu_raw %>%
-  rename("taxon_name" = "taxon_name_accepted",
+  rename("taxon_name" = "taxon_name",
          "scientificName" = "taxon_full_name_orig",
          "specificEpithet" = "species",
          "taxonRank" = "infra_rank",
@@ -1232,13 +1232,13 @@ exsitu_raw <- exsitu_raw %>%
          "individualCount" = "num_indiv",
          "decimalLatitude" = "lat_dd",
          "decimalLongitude" = "long_dd",
-         "coordinateUncertaintyInMeters" = "uncertainty",
+         "coordinateUncertaintyInMeters" = "latlong_uncertainty",
          "verbatimLocality" = "all_locality",
          "stateProvince" = "state",
          "establishmentMeans" = "prov_type") %>%
   unite("recordedBy", c("coll_name","coll_num"), remove=T, sep="; ") %>%
-  unite("geolocationNotes", c("gps_det","geolocated_by",
-                              "gps_notes"), remove=T, sep="; ") %>%
+  unite("geolocationNotes", c("latlong_det","geolocated_by",
+                              "latlong_notes"), remove=T, sep="; ") %>%
   unite("locationNotes", c("germ_type","garden_loc"), remove=T, sep="; ")
 # recode if needed establishmentMeans
 sort(unique(exsitu_raw$establishmentMeans))

@@ -1,4 +1,4 @@
-### 1-get_taxa_countries.R
+### 1-get_taxa_metadata.R
 ### Authors: Emily Beckman Bruns & Shannon M Still
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
@@ -57,14 +57,14 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 taxon_list <- read.csv(file.path(main_dir,taxa_dir,
                                  "target_taxa_with_synonyms.csv"), 
                        header = T,na.strings=c("","NA"),colClasses="character")
-nrow(taxon_list) #45
+nrow(taxon_list) #39
 # see target genus/genera name(s) - you'll use these in a minute
 unique(separate(taxon_list,taxon_name,into="genus",extra="drop")[1])
 
 # in case you're running this again, just keep the original columns:
 taxon_list <- taxon_list %>% 
     select(taxon_name,taxon_name_accepted,taxon_name_status,
-           natureserve_rank #add other manually-added columns here as needed
+           ns_rank, ns_taxon_name #add any other manually-added columns here
            ) 
 
 # create folder for files used in / created by this script
@@ -103,7 +103,7 @@ category <- read.csv(file.path(main_dir,taxa_dir,output_dir,
 # keep just the threat category data
 category <- category %>% 
   select(scientificName,redlistCategory) %>%
-  rename(taxon = scientificName, redlist_category = redlistCategory)
+  rename(taxon = scientificName, rl_category = redlistCategory)
 
 ## COUNTRIES OF OCCURRENCE
 
@@ -163,17 +163,23 @@ syn_match # see note below about these
 taxon_list <- left_join(taxon_list, rl_add, 
                         by=c("taxon_name_accepted" = "taxon"))
 
+# add Not Applicable RL category for any hybrids
+taxon_list[which(grepl(" x ",taxon_list$taxon_name_accepted)),]$rl_category <- "Not Applicable"
+# add Not Evaluated for any taxa with no RL category
+taxon_list[which(is.na(taxon_list$rl_category)),]$rl_category <- "Not Evaluated"
+
 # note that we don't automatically add the "syn_match" matches; for example, 
 # if Querucs montana is your accepted name but there is only RL data for it's 
 # synonym Quercus prinus, then the RL data will not be added to your taxon list
 # (we only match to *accepted* names); if you'd like to add RL data found for 
-# synonyms, you can do it manually following this example:
+# synonyms (first think about if it makes sense for that taxon!), you can do 
+# it manually following this example:
 #add <- taxon_test %>% 
 #  filter(taxon_name == "Quercus prinus") %>%
-#  select(redlist_category,rl_native_dist,rl_native_dist_iso2c,
+#  select(rl_category,rl_native_dist,rl_native_dist_iso2c,
 #         rl_introduced_dist,rl_introduced_dist_iso2c,rl_taxon_name)
 #taxon_list[which(taxon_list$taxon_name_accepted == "Quercus montana"),
-#           c("redlist_category","rl_native_dist","rl_native_dist_iso2c","
+#           c("rl_category","rl_native_dist","rl_native_dist_iso2c","
 #             "rl_introduced_dist","rl_introduced_dist_iso2c",
 #             "rl_taxon_name")] <- add
 
@@ -282,7 +288,7 @@ head(taxon_list)
 
 # see which accepted target taxa have no distribution data matched
 unique(taxon_list[is.na(taxon_list$gts_native_dist) &
-           is.na(taxon_list$rl_native_dist),]$taxon_name_accepted) #9
+           is.na(taxon_list$rl_native_dist),]$taxon_name_accepted)
 # you can add data for these manually if you'd like; for example:
 add_manually <- data.frame(
   taxon_name_accepted = c("Asimina incana", "Asimina longifolia",
@@ -328,8 +334,8 @@ unique(taxon_list$all_native_dist_iso2c)
 # order columns
 taxon_list <- taxon_list %>%
   select(taxon_name,taxon_name_accepted,taxon_name_status,
-         natureserve_rank, #add other manually-added columns here as needed
-         redlist_category,all_native_dist,all_native_dist_iso2c,
+         ns_rank, ns_taxon_name, #add any other manually-added columns here 
+         rl_category,all_native_dist,all_native_dist_iso2c,
          rl_native_dist,rl_native_dist_iso2c,
             rl_introduced_dist,rl_introduced_dist_iso2c,rl_taxon_name,
          gts_native_dist,gts_native_dist_iso2c,gts_taxon_name,

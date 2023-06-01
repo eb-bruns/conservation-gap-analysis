@@ -54,16 +54,16 @@
 #    dataset
 
 ### OUTPUTS:
+  ## ExSitu_Unmatched_Species_YYYY_MM_DD.csv
+  #   List of taxa in the ex situ accessions data that have no match in your
+  #   target taxa list (target_taxa_with_synonyms.csv); these can be reviewed
+  #   manually and added, as desired, to the synonyms in your taxa list
   ## Genera_Institutions_Summary_YYYY_MM_DD.csv
   #   Summary of which genera each institution reports:
   #     inst_short    genera 
   #     ARM005        Amygdalus; Cerasus; Diospyros; Prunus  
   #     HuntingtonBG  Asimina; Carya; Diospyros; Juglans; Prunus
   #     ...
-  ## ExSitu_Unmatched_Species_YYYY_MM_DD.csv
-  #   List of taxa in the ex situ accessions data that have no match in your
-  #   target taxa list (target_taxa_with_synonyms.csv); these can be reviewed
-  #   manually and added, as desired, to the synonyms in your taxa list
   ## ExSitu_Dead_YYYY_MM_DD.csv
   #   All ex situ records with zero individuals (dead / removed accessions);
   #   we remove these from the ex situ data, but use them in the wild occurrence
@@ -140,8 +140,8 @@ read.exsitu.csv <- function(path,submission_year){
   # create list of paths to ex situ accessions CSV files in folder
   file_list <- list.files(path=path,pattern=".csv",full.names=TRUE)
   # read in each csv in path list to create list of data frames
-  file_dfs <- lapply(file_list,read.csv,header=TRUE,fileEncoding="LATIN1",
-    strip.white=TRUE,colClasses="character",na.strings=c("","NA"))
+  file_dfs <- lapply(file_list, read.csv, header=TRUE, fileEncoding="LATIN1",
+    strip.white=TRUE, colClasses="character", na.strings=c("","NA","N/A"))
   print(paste0("Number of files: ",length(file_dfs)))
     #sapply(file_dfs, nrow) # can look at number of rows in each csv
   # for each file, make some edits...
@@ -204,8 +204,7 @@ all_data <- read.exsitu.csv(file.path(main_dir, exsitu_dir, data_in,
 
 # look at columns
 sort(colnames(all_data))
-
-### IF NEEDED, EDIT A FEW COLS (un-comment & update code chunks for your data)...
+### IF NEEDED, EDIT COLUMNS (un-comment & update code chunks for your data)...
   ## combine multiple inst_short columns
 #all_data <- tidyr::unite(all_data,"inst_short", c("inst_short","inst_short2"),
 #  sep=";",remove=T,na.rm=T)
@@ -362,19 +361,22 @@ all_data$latlong_notes <- NA
   # collection site description
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/coll.csv")
   # I think the "Found and resolved improper quoting" warning is ok
-gen_col <- data.table::fread(file = genPath, header = TRUE)
+gen_col <- data.table::fread(file = genPath, header = TRUE, 
+                             na.strings=c("NA",""))
   str(gen_col)
   nrow(gen_col) ; length(unique(gen_col$genesysId))
   # metadata about record
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/core.csv")
-gen_core <- data.table::fread(genPath, header = TRUE)
-  str(gen_core)
+gen_core <- data.table::fread(genPath, header = TRUE,
+                              na.strings=c("NA",""))
+str(gen_core)
   nrow(gen_core) ; length(unique(gen_core$genesysId))
   # spatial info
   #   for some reason the headers don't read in correctly with fread;
   #   will use read.csv just to get the headers and add them to the fread df
 genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/geo.csv")
-gen_geo <- data.table::fread(genPath, header = TRUE)
+gen_geo <- data.table::fread(genPath, header = TRUE,
+                             na.strings=c("NA",""))
   str(gen_geo)
   colnames(gen_geo)
 gen_geo_head <- read.csv(genPath)
@@ -398,7 +400,6 @@ genesys_sel <- genesys %>%
   rename(taxon_full_name = fullTaxa,
          coll_num = collNumb,
          locality = collSite,
-         notes = uuid,
          inst_short = instCode,
          acc_num = acceNumb,
          infra_rank = subtaxa,
@@ -410,7 +411,7 @@ genesys_sel <- genesys %>%
          orig_source = collSrc,
          prov_type = sampStat,
          latlong_uncertainty = uncertainty) %>%
-  select(UID,taxon_full_name,coll_num,coll_year,locality,notes,
+  select(UID,taxon_full_name,coll_num,coll_year,locality,
     inst_short,acc_num,infra_rank,country,orig_lat,orig_long,latlong_notes,
     germ_type,orig_source,prov_type,genus,species,latlong_uncertainty)
 
@@ -522,15 +523,15 @@ sort(unique(all_data2$hybrid))
 #   in the hybrid column that does not mark the record as a hybrid (e.g. 
 #   "species") and remove that text; the following will need edits !!!...
 # if needed, standardize so only one hybrid symbol is used ( x )
-#all_data2$hybrid <- mgsub(all_data2$hybrid,
-#  c(" A ","^A ","^A$"," X ","^X"," _ ","^_ ","^_$","^1$","\\*","^H$","^hyb$","Hybrid"),
-#  " x ", fixed=F)
+all_data2$hybrid <- mgsub(all_data2$hybrid,
+  c(" A ","^A ","^A$"," X ","^X"," _ ","^_ ","^_$","^1$","\\*","^H$","^hyb$","Hybrid"),
+  " x ", fixed=F)
 # add "x" at beginning then remove duplicates
-#all_data2$hybrid[!is.na(all_data2$hybrid)] <- paste0("x ",all_data2$hybrid[!is.na(all_data2$hybrid)])
-#all_data2$hybrid <- str_squish(all_data2$hybrid)
-#all_data2$hybrid <- str_to_lower(all_data2$hybrid)
-#all_data2$hybrid <- mgsub(all_data2$hybrid,c("x x","x h$"),"x",fixed=F)
-#sort(unique(all_data2$hybrid))
+all_data2$hybrid[!is.na(all_data2$hybrid)] <- paste0("x ",all_data2$hybrid[!is.na(all_data2$hybrid)])
+all_data2$hybrid <- str_squish(all_data2$hybrid)
+all_data2$hybrid <- str_to_lower(all_data2$hybrid)
+all_data2$hybrid <- mgsub(all_data2$hybrid,c("x x","x h$"),"x",fixed=F)
+sort(unique(all_data2$hybrid))
 
 # create concatenated taxon_full_name column
 all_data2 <- tidyr::unite(all_data2, "taxon_full_name_concat",
@@ -554,22 +555,6 @@ unique(all_data2$taxon_full_name)
 # add space after periods in taxon_full_name
 all_data2$taxon_full_name <- gsub(".",". ",all_data2$taxon_full_name,fixed=T)
 all_data2$taxon_full_name <- str_squish(all_data2$taxon_full_name)
-
-# summary of genera for each institution
-gen_summary <- all_data2 %>%
-  arrange(genus) %>%
-  rename(genera = genus) %>%
-  group_by(inst_short) %>%
-  mutate(
-    genera = paste(unique(genera), collapse = '; ')) %>%
-  ungroup() %>%
-  distinct(inst_short,genera)
-gen_summary
-# write file
-write.csv(gen_summary, 
-          file.path(main_dir, exsitu_dir, data_out,
-                    paste0("Genera_Institutions_Summary_", Sys.Date(), ".csv")),
-          row.names = F)
 
 ################################################################################
 # 5. Further standardize taxon name, then keep data for target taxa only
@@ -597,7 +582,7 @@ all_data2$genus_new <- all_data2$genus
 
 # remove records with no/non-standard specific epithet (mostly cultivars or
 #   'sp.' or questionable '?') by looking in species name column;
-# if you WANT cultivars, you'll need to change this!
+# if you WANT cultivars, you may need to edit this!
 all_data3 <- all_data2 %>%
   filter(!grepl("\"",species_new) &
            !grepl("\'",species_new) &
@@ -609,7 +594,7 @@ all_data3 <- all_data2 %>%
            !grepl("\\?",species_new) &
            !is.na(species_new))
 nrow(all_data3)
-# see records removed; can add anything you want to fix to the
+# see names for records removed; can add anything you want to fix to the
 #   "manually fix taxon name issues you notice" section above and rerun 
 #   starting where you first created all_data2
 sort(unique(suppressMessages(anti_join(all_data2,all_data3))$taxon_full_name))
@@ -694,18 +679,16 @@ all_data3 <- all_data3 %>%
 
 # join dataset to taxa list
 ### ROUND 1: match full taxon name
-  # remove genus column in taxa list if you have it
-taxon_list <- taxon_list %>% select(-genus)
   # add genus_species column to taxon list
 taxon_list$genus_species <- NA
 taxon_list$genus_species <- sapply(taxon_list$taxon_name, function(x)
   unlist(strsplit(x," var. | subsp. | f. "))[1])
   # join by taxon name
 all_data4 <- full_join(all_data3,taxon_list)
-table(all_data4$taxon_name_status) # Accepted: 10627 | Synonym: 577 
+table(all_data4$taxon_name_status) 
 ### ROUND 2: match just by species name
 need_match2 <- all_data4[which(is.na(all_data4$taxon_name_status)),]
-nrow(need_match2) #139564
+nrow(need_match2)
     # remove columns from first taxon name match
 need_match2 <- need_match2[,1:(ncol(all_data4)-ncol(taxon_list)+1)]
     # remove taxon_name col from taxon data so it doesn't match
@@ -720,28 +703,17 @@ need_match2 <- left_join(need_match2,taxon_list_sp); nrow(need_match2)
   # bind together new matches and previously matched
 matched1 <- all_data4[which(!is.na(all_data4$taxon_name_status)),]
 all_data4 <- rbind(matched1,need_match2)
-  table(all_data4$taxon_name_status) # Accepted: 10943 | Synonym: 580
-  # see how many rows have taxon name match
-nrow(all_data4[which(!is.na(all_data4$taxon_name_status)),]) #11523
-#table(all_data4$taxon_region)
+  table(all_data4$taxon_name_status)
 head(all_data4)
-# fill in extra data for synonyms
-all_data4 <- all_data4 %>% 
-  select(-iucnredlist_category,-natureserve_rank,-fruit_nut)
-taxon_list_add <- taxon_list %>% 
-  filter(taxon_name_status == "Accepted") %>%
-  select(taxon_name_accepted,iucnredlist_category,natureserve_rank,fruit_nut)
-all_data4 <- left_join(all_data4,taxon_list_add)
 
-### CHECK UNMATCHED SPECIES, TO ADD TO SYNONYM LIST AS NECESSARY ###
+### CHECK UNMATCHED SPECIES; ADD TO SYNONYM LIST AS NECESSARY ###
 check <- all_data4 %>% filter(is.na(taxon_name_status))
 check <- data.frame(taxon_name = sort(unique(check$taxon_name)))
-head(check); nrow(check) #576
-check
+nrow(check); check
 # write file for checking, as desired
   # IF YOU FIND MISSPELLINGS AND/OR ADDITIONAL SYNONYMS, YOU CAN ADD THEM TO
-  #   YOUR TARGET TAXA LIST AND GO BACK TO THE LINE WHERE WE "read in target
-  #   taxa list" (SECTION 4) AND RUN AGAIN FROM THERE
+  #   YOUR TARGET TAXA LIST AND GO BACK TO THE START OF SECTION 4 AND RUN AGAIN 
+  #   FROM THERE
 write.csv(check, file.path(main_dir, exsitu_dir,data_out,
                            paste0("ExSitu_Unmatched_Species_", Sys.Date(), 
                                   ".csv")),row.names = F)
@@ -749,32 +721,27 @@ write.csv(check, file.path(main_dir, exsitu_dir,data_out,
 # keep only matched names
 all_data5 <- all_data4 %>% 
   filter(!is.na(taxon_name_status) & !is.na(inst_short))
-nrow(all_data5) #11405
+nrow(all_data5)
 # see target taxa with no data
 unique(taxon_list$taxon_name_accepted)[
-  !(unique(taxon_list$taxon_name_accepted) %in% 
-      (unique(all_data5$taxon_name_accepted)))]
-# "Asimina incana"                     "Asimina manasota"                   
-# "Asimina pygmaea"                    "Asimina x nashii"                  
-# "Carya x lecontei"                   "Carya x ludoviciana"               
-# "Juglans major var. major"           "Juglans microcarpa var. microcarpa" 
-# "Juglans microcarpa var. stewartii"  "Prunus gracilis" 
-# "Prunus murrayana"                   "Prunus x orthosepala" 
+  !(unique(taxon_list$taxon_name_accepted) %in% (unique(all_data5$taxon_name_accepted)))]
+# "Asimina incana" "Asimina manasota" "Asimina pygmaea" "Asimina reticulata"
+# "Asimina x nashii" "Juglans major var. major" "Juglans microcarpa var. microcarpa" 
 
-# see names with an x in the full name but not the accepted name
+# see any names with an x in the full name but not the accepted name
 unique(all_data5[which(grepl(" x ",all_data5$taxon_full_name_orig) &
                          !grepl(" x ",all_data5$taxon_name_accepted)),
                  c("taxon_full_name_orig","taxon_name_accepted")])
-# these are hybrids we don't want; remove
+# these are complicated hybrids we don't want; remove
 all_data5 <- all_data5 %>%
   filter(!(grepl(" x ",all_data5$taxon_full_name_orig) &
            !grepl(" x ",all_data5$taxon_name_accepted)))
-nrow(all_data5) #11361
+nrow(all_data5) #310
 
 # final part for removing duplicate data - from previous years or networks
-### UPDATE THIS SECTION BASED ON YOUR SPECIFIC NEEDS; THIS IS FOR QUERCUS 2022:
-  # for 2021 and 2022 data, only remove older data for species provided
 all_data6 <- all_data5
+### UPDATE THIS SECTION BASED ON YOUR SPECIFIC NEEDS; THIS IS FOR QUERCUS 2022:
+# for 2021 and 2022 data, only remove older data for species provided
 #dup_2022 <- unique(all_data6[which(all_data6$submission_year=="2022"),
 #  c("taxon_name","inst_short")]); dup_2022
 #for(i in 1:nrow(dup_2022)){
@@ -782,7 +749,7 @@ all_data6 <- all_data5
 #   filter(!(taxon_name == dup_2022[i,1] &
 #            inst_short == dup_2022[i,2] &
 #            submission_year != "2022"))
-#}; nrow(all_data6) #46666
+#}; nrow(all_data6)
 #dup_2021 <- unique(all_data6[which(all_data6$submission_year=="2021"),
 #  c("taxon_name","inst_short")]); dup_2021
 #for(i in 1:nrow(dup_2021)){
@@ -790,7 +757,23 @@ all_data6 <- all_data5
 #  filter(!(taxon_name == dup_2021[i,1] &
 #           inst_short == dup_2021[i,2] &
 #           submission_year != "2021"))
-#}; nrow(all_data6) #46623 (was 10831 before)
+#}; nrow(all_data6)
+
+# summary of genera for each institution
+gen_summary <- all_data6 %>%
+  arrange(genus) %>%
+  rename(genera = genus) %>%
+  group_by(inst_short) %>%
+  mutate(
+    genera = paste(unique(genera), collapse = '; ')) %>%
+  ungroup() %>%
+  distinct(inst_short,genera)
+gen_summary
+# write file
+write.csv(gen_summary, 
+          file.path(main_dir, exsitu_dir, data_out,
+                    paste0("Genera_Institutions_Summary_", Sys.Date(), ".csv")),
+          row.names = F)
 
 ################################################################################
 # 6. Standardize important columns
@@ -811,22 +794,23 @@ str(all_data7)
 ## Provenance type
 ##
 
-# look at column contents and change below phrases as needed
+# save original version of column for reference
 all_data7$orig_prov_type <- all_data7$prov_type
 all_data7$prov_type <- str_to_lower(all_data7$prov_type)
-sort(unique(all_data7$prov_type))
+
 ## IF NEEDED: transfer contents of one column to another column, if data
 #   needs to be preserved but is in the wrong place
-# Warnings are fine here
-all_data7[which(all_data7$prov_type=="130"|grepl("^130) ",all_data7$prov_type)),]$notes <- "Semi-natural/sown"
-#all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
-all_data7[which(all_data7$prov_type=="300"|grepl("^300) ",all_data7$prov_type)),]$notes <- "Traditional cultivar/landrace"
+  # these are used in Genesys; try each and comment out if error is thrown...
+#all_data7[which(all_data7$prov_type=="130"|grepl("^130) ",all_data7$prov_type)),]$notes <- "Semi-natural/sown"
+all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
+#all_data7[which(all_data7$prov_type=="300"|grepl("^300) ",all_data7$prov_type)),]$notes <- "Traditional cultivar/landrace"
 all_data7[which(all_data7$prov_type=="400"|grepl("^400) ",all_data7$prov_type)),]$notes <- "Breeding/research material"
 all_data7[which(all_data7$prov_type=="500"|grepl("^500) ",all_data7$prov_type)),]$notes <- "Advanced or improved cultivar (conventional breeding methods)"
-all_data7[which(grepl("county",all_data7$prov_type)),]$notes <- all_data7[which(grepl("county",all_data7$prov_type)),]$prov_type
 
-# standardize column by searching for keywords and replacing with standard value
-  # remove confusing words/phrases
+### look at column contents and CHANGE THE SECTIONS BELOW AS NEEDED...
+sort(unique(all_data7$prov_type))
+# standardize the column by searching for keywords & replacing with standard value
+  # first remove any confusing words/phrases
 all_data7$prov_type <- mgsub(all_data7$prov_type,
   c("not of known wild origin","could be cultivated","not of wild source",
     "wildsourceunsure","cultivated plant of known "), "")
@@ -848,14 +832,14 @@ all_data7$prov_type <- ifelse(grepl(paste(
   # unknown (U)
 all_data7$prov_type <- ifelse(grepl(paste(
   c("^\\(u\\)$","^u$","^u ","unsure","insufficient data","unknown","\\?","un",
-    "need to confirm","breeding","400","410","donated","999","purchased"),
+    "need to confirm","breeding","400","410","416","donated","999","purchased"),
   collapse = "|"), all_data7$prov_type),"U",all_data7$prov_type)
   # cultivated (H)
 all_data7$prov_type <- ifelse(grepl(paste(
   c("cultiva","garden","^c$","^g$","^g ","^h$","horticult","landrace","clone",
     "300","500","^g\\."),
   collapse = "|"), all_data7$prov_type),"H",all_data7$prov_type)
-# check one last time
+## check one last time to be sure you got everything
 sort(unique(all_data7$prov_type))
   # not given (NG) ; everything else
 all_data7$prov_type <- ifelse(all_data7$prov_type!= "W" &
@@ -866,48 +850,47 @@ all_data7$prov_type[which(is.na(all_data7$prov_type))] <- "NG"
 
 # check results
 table(all_data7$prov_type)
-#    H    N   NG    U    W    Z
-# 2856   25 2816 1641 3841  182 
 
 ##
 ## B) Number of Individuals
 ##
 
+## IF NEEDED: change # of individuals for rows that say dead/removed, etc., if
+# you have a 'condition' column
+#sort(unique(all_data7$condition))
+  ## CHANGE BASED ON PHRASE(S) IN YOUR DATA...
+#all_data7[which(all_data7$condition=="Dead"),]$num_indiv <- "0"
+#all_data7[which(all_data7$num_indiv=="all dead"),]$num_indiv <- "0"
 
-## IF NEEDED: change # of individuals for rows that say dead/removed, etc.
-sort(unique(all_data$condition))
-#all_data[which(all_data$condition=="Dead"),]$num_individuals <- "0"
-
-
-
-
-# make everything lowercase
+# make everything lowercase; see what you have
 all_data7$num_indiv <- str_to_lower(all_data7$num_indiv)
-  ## IF NEEDED: replace unwanted characters
-  all_data7$num_indiv <- mgsub(all_data7$num_indiv,
-    c(" \\(all dead\\)"," \\(removed 2017\\)","\\?",","," plants"," or 5",
-      " pieces","ca\\. ","ca\\."," alive","\\*","1 \\(","\\)","\\+",
-      " in terra","alive;","a a a a a a a a a a a",";[0-9][0-9]",";1",
-      ";2",";3",";4",";5",";7",";0",";"),
+sort(unique(all_data7$num_indiv))
+
+## IF NEEDED: replace unwanted characters
+all_data7$num_indiv <- mgsub(all_data7$num_indiv,
+    c("\\?",","," plants"," pieces","ca\\.","alive","\\+",
+      " in terra",";[0-9][0-9]",";1",";2",";3",";4",";5",";7",";0",";"),
       c(""), fixed=F)
-  sort(unique(all_data7$num_indiv))
-  # save version where we identify which didn't have # of individuals provided
-  all_data7$num_indiv[which(!grepl("^[0-9]+$",all_data7$num_indiv))] <- "Unknown"
-  all_data7$orig_num_indiv <- all_data7$num_indiv
-  # now we change the type to numeric and replace NA with 1, so we can use this
-  #   in calculations and when combining duplicate records later
-  # "NAs introduced by coercion" warning ok
-  all_data7$num_indiv <- as.numeric(all_data7$num_indiv)
-  all_data7$num_indiv[which(is.na(all_data7$num_indiv))] <- 1
+all_data7$num_indiv <- str_squish(all_data7$num_indiv)
+sort(unique(all_data7$num_indiv))
+
+# save version where we identify which didn't have # of individuals provided
+all_data7$num_indiv[which(!grepl("^[0-9]+$",all_data7$num_indiv))] <- "Unknown"
+all_data7$orig_num_indiv <- all_data7$num_indiv
+
+# now we change the type to numeric and replace NA with 1, so we can use this
+#   in calculations and when combining duplicate records later
+# "NAs introduced by coercion" warning ok
+all_data7$num_indiv <- as.numeric(all_data7$num_indiv)
+all_data7$num_indiv[which(is.na(all_data7$num_indiv))] <- 1
 
 # check results
 sort(unique(all_data7$num_indiv))
-nrow(all_data7) #11361
 
 # remove records with no individuals (first save as separate file)
 no_indiv <- all_data7[which(all_data7$num_indiv == 0),]
-nrow(no_indiv) #918
-write.csv(no_indiv, file.path(main_dir, exsitu_dir,data_out,
+nrow(no_indiv)
+write.csv(no_indiv, file.path(main_dir, exsitu_dir, data_out,
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # save to in situ data folder as well
 if(!dir.exists(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ")))
@@ -917,25 +900,22 @@ write.csv(no_indiv, file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ",
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # remove records with no individuals
 all_data7 <- all_data7[which(all_data7$num_indiv > 0),]
-nrow(all_data7) #10443
+nrow(all_data7)
 
 ##
 ## C) Latitude and Longitude
 ##
 
 all_data8 <- all_data7
+
+# create temporary ID col for use in this section
 all_data8$temp_id <- seq.int(nrow(all_data8))
 
 # preserve original lat and long columns
 all_data8$lat_dd <- all_data8$orig_lat
 all_data8$long_dd <- all_data8$orig_long
 
-# fix some common lat/long character issues
-all_data8$lat_dd <- mgsub(all_data8$lat_dd,
-  c("\"","ç","d","'","°","º","Â","¼","،","¡","_","´","*","À","?","`")," ")
-all_data8$long_dd <- mgsub(all_data8$long_dd,
-  c("\"","ç","d","'","°","º","Â","¼","،","¡","_","´","*","À","?","`")," ")
-# replace comma with decimal (european notation)
+# replace comma with decimal (European notation)
 all_data8$lat_dd <- mgsub(all_data8$lat_dd, c(","), ".")
 all_data8$long_dd <- mgsub(all_data8$long_dd, c(","), ".")
 # separate values if lat and long both ended up in the lat column
@@ -945,7 +925,7 @@ all_data8[which(grepl("\\. ",all_data8$lat_dd)),] <-
 
 # replace unwanted characters
   ## latitude
-  # replace random unnecessary characters
+  # replace unnecessary characters so we just have numbers
 all_data8$lat_dd <- mgsub(all_data8$lat_dd,
   c("N","\\","/","M","A",": ","E","AZ","R","d","a"," \\."," W")," ")
     # remove leading zero
@@ -960,16 +940,18 @@ all_data8$lat_dd <- gsub("S","",all_data8$lat_dd)
 all_data8$lat_dd <- gsub("--","-",all_data8$lat_dd)
     # remove double spaces or leading/trailing whitespace
 all_data8$lat_dd <- str_squish(all_data8$lat_dd)
+all_data8$lat_dd[all_data8$lat_dd==""] <- NA
 sort(unique(all_data8$lat_dd))
   # can check source of specific values that aren't formatted correctly
 #all_data8[which(all_data8$lat_dd == "422538"),]
   ## longitude
-all_data8$long_dd <- replace_non_ascii(all_data8$long_dd,
-  replacement=" ", remove.nonconverted=T)
+  # replace unnecessary characters so we just have numbers
 all_data8$long_dd <- mgsub(all_data8$long_dd,
   c("E","\\","/","NR","d","A","a"," .","o","O")," ")
+  # remove leading zero
 all_data8$long_dd[which(grepl("^ *[0][1-9]+",all_data8$long_dd))] <- gsub(
   "^ *[0]","",all_data8$long_dd[which(grepl("^ *[0][1-9]+",all_data8$long_dd))])
+  # add negative sign if west and remove "W"
 all_data8$long_dd[which(grepl("^W *[0][1-9]+",all_data8$long_dd))] <- gsub(
   "^W *[0]","-",all_data8$long_dd[which(grepl("^W *[0][1-9]+",
     all_data8$long_dd))])
@@ -977,9 +959,10 @@ all_data8$long_dd[grep("W",all_data8$long_dd,ignore.case=T)] <-
   paste("-",all_data8$long_dd[grep("W",all_data8$long_dd,ignore.case=T)],sep="")
 all_data8$long_dd <- gsub("W","",all_data8$long_dd)
 all_data8$long_dd <- mgsub(all_data8$long_dd,c("--","- "),"-")
+  # remove double spaces or leading/trailing whitespace
 all_data8$long_dd <- str_squish(all_data8$long_dd)
+all_data8$long_dd[all_data8$long_dd==""] <- NA
 sort(unique(all_data8$long_dd))
-  # USBG gave data with species name in lat-long fields :(
 
 # convert decimal-minutes-seconds (dms) to decimal degrees (dd)
 #   [d, m, and s must be in the same cell, with 1 space between each value]
@@ -987,7 +970,7 @@ sort(unique(all_data8$long_dd))
   # mark rows that need to be converted
 convert <- all_data8[which(grepl(" ",all_data8$lat_dd) |
   grepl(" ",all_data8$long_dd)),]
-  nrow(convert) #132
+  nrow(convert)
 unique(convert$lat_dd)
 good <- anti_join(all_data8, convert)
   # separate by dec_min_sec and deg_dec_min then convert to decimal degrees
@@ -1027,21 +1010,23 @@ all_data8$lat_dd[zero] <- NA; all_data8$long_dd[zero] <- NA
   # flag non-numeric and not available coordinates and lat > 90, lat < -90,
   # lon > 180, and lon < -180
 coord_test <- cc_val(all_data8, lon = "long_dd",lat = "lat_dd",
-  value = "flagged", verbose = TRUE) #Flagged 8709 records.
+  value = "flagged", verbose = TRUE)
   # try switching lat and long for invalid points and check validity again
 all_data8[!coord_test,c("lat_dd","long_dd")] <-
   all_data8[!coord_test,c("long_dd","lat_dd")]
 coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
-  value = "flagged",verbose = TRUE) #Flagged 8709 records.
+  value = "flagged",verbose = TRUE)
 
 # check longitude values that are positive, since
-# sometimes the negative gets left off
+#   sometimes the negative gets left off
 pos_long <- all_data8[which(all_data8$long_dd > 0),]
-# IF the taxon is native to N/S America, make long value negative:
+# IF the taxon is native to N/S America, make longitude value negative (you need
+#   a taxon_region column for this!)...
 #unique(all_data8$taxon_region)
 #setDT(all_data8)[long_dd > 0 & taxon_region != "Europe" &
 #                 taxon_region != "Asia" & taxon_region != "Asia & Europe",
 #                 long_dd := as.numeric(paste0("-",as.character(long_dd)))]
+# OR, IF ALL YOUR TARGET TAXA ARE NATIVE TO THE AMERICAS:
 setDT(all_data8)[long_dd > 0,
                  long_dd := as.numeric(paste0("-",as.character(long_dd)))]
 
@@ -1050,12 +1035,12 @@ coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
   value = "flagged",verbose = TRUE)
 all_data8[!coord_test,"lat_dd"] <- NA
 all_data8[!coord_test,"long_dd"] <- NA
-nrow(all_data8) #10443
+nrow(all_data8)
 
 ### now we'll work just with the geolocated points for a bit
 all_data8$latlong_flag <- ""
 have_coord <- all_data8 %>% filter(!is.na(lat_dd) & !is.na(long_dd))
-nrow(have_coord) #1734
+nrow(have_coord)
 no_coord <- anti_join(all_data8,have_coord)
 no_coord$latlong_country <- ""
 # add country-level information to fix potentially-switched lat/longs
@@ -1063,12 +1048,15 @@ no_coord$latlong_country <- ""
 crdref <- "+proj=longlat +datum=WGS84"
 geo_pts_spatial <- vect(cbind(have_coord$long_dd,have_coord$lat_dd),
   atts=have_coord, crs=crdref)
+  # world countries shapefile should be downloaded from 
+  #    https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
+  #    and placed in your gis_layers folder
 world_polygons <- vect(file.path(main_dir,gis_dir,
-  "UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp"))
+  "World_Countries_(Generalized)/World_Countries__Generalized_.shp"))
 # add country polygon data to each point based on lat-long location
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
 # try switching lat and long for points in Antarctica
-on_land <- as.data.frame(geo_pts); nrow(on_land) #1619
+on_land <- as.data.frame(geo_pts); nrow(on_land)
 on_land[which(on_land$COUNTRY == "Antarctica"),c("lat_dd","long_dd")] <-
   on_land[which(on_land$COUNTRY == "Antarctica"),c("long_dd","lat_dd")]
 head(on_land)
@@ -1082,16 +1070,16 @@ on_land <- geo_pts %>%
   select(-FID,-ISO,-COUNTRYAFF,-AFF_ISO,-SHAPE_Leng,-SHAPE_Area) %>%
   rename(latlong_country = COUNTRY)
 on_land <- as.data.frame(on_land)
-nrow(on_land) #1587
+nrow(on_land)
 land_id <- unique(on_land$temp_id)
 # check if points are in water and mark
   # get points that have coords but didn't fall in a country;
   # these are in the water
 in_water <- have_coord %>% filter(!(temp_id %in% land_id))
 in_water <- as.data.frame(in_water)
-in_water$latlong_flag <- "Given lat-long is in water"
+in_water$latlong_flag <- "Given lat-long may be in the water"
 in_water$latlong_country <- ""
-nrow(in_water) #147
+nrow(in_water)
 # bind all the points back together
 all_data9 <- rbind(on_land,in_water,no_coord)
 nrow(all_data9)
@@ -1107,9 +1095,10 @@ unique(garden_latlong$inst_short)
 nrow(garden_latlong)
 all_data9[which(all_data9$temp_id %in% garden_latlong$temp_id),]$latlong_flag <-
   "Given lat-long is at institution, use only if native to grounds"
+  # you can make lat-long NA for these without checking them first, if desired:
 #all_data9[all_data9$UID %in% garden_latlong$UID,]$lat_dd <- NA
 #all_data9[all_data9$UID %in% garden_latlong$UID,]$long_dd <- NA
-table(all_data9$latlong_flag) #grounds = 154; water = 147
+table(all_data9$latlong_flag) 
 
 # add latlong_det (latlong determination) column
 all_data9$latlong_det[which(all_data9$prov_type == "H")] <- "N/A (horticultural)"
@@ -1117,41 +1106,43 @@ all_data9$latlong_det[which(!is.na(all_data9$lat_dd) &
   !is.na(all_data9$long_dd))] <- "Given"
 all_data9$latlong_det[which(all_data9$latlong_det == "")] <- NA
 table(all_data9$latlong_det)
-# Given     N/A (horticultural)
-# 1734      2660 
 
 # where prov_type is "N/A (horticultural)" but lat-long is given, change to "H?"
   # create new prov type column
 all_data9$prov_type[which(all_data9$latlong_det == "Given" &
   all_data9$prov_type == "H")] <- "H?"
 table(all_data9$prov_type)
-#    H   H?    N   NG    U    W    Z
-# 2660  121   25 2277 1586 3598  176
 
 ##
 ## D) Collection year
 ##
 
-# I decided I didn't have time to standardize the collection year column; 
-# if you'd like to do that, you can play with updating the following section
+# this is not usually vital and takes some effort depending on your dataset;
+# if you decide it's not necessary to standardize collection year, just comment 
+# out this section; if you do want to standardize, you'll need to play with 
+# updating the following section for your data
+
 sort(unique(all_data9$coll_year))
 # separate additional years
-#all_data9 <- all_data9 %>% 
-#  separate("coll_year","coll_year",sep="; ",remove=F)
-#all_data9 <- all_data9 %>% 
-#  separate("coll_year","coll_year",sep=";",remove=F)
+all_data9 <- all_data9 %>% 
+  separate("coll_year","coll_year",sep="; |;",remove=F)
 
 ## IF NEEDED: replace non-year words/characters
-#all_data9$coll_year <- mgsub(all_data9$coll_year,
-#  c("----","about ","ca.","Unknown","original","Estate","estate","<",
-#    "NEAR ","PRE "),"")
-#all_data9$coll_year[which(all_data9$coll_year == "")] <- NA
-#all_data9$coll_year <- gsub("-","/",all_data9$coll_year)
-#all_data9$coll_year <- gsub("\\.","/",all_data9$coll_year)
-#sort(unique(all_data9$coll_year))
+all_data9$coll_year <- mgsub(all_data9$coll_year,
+  c("----","about ","ca.","Unknown","original","Estate","estate","<",
+    "NEAR ","PRE "),"")
+all_data9$coll_year[all_data9$coll_year == ""] <- NA
+  # change all month/day separators to a slash
+all_data9$coll_year <- gsub("-|\\.","/",all_data9$coll_year)
+sort(unique(all_data9$coll_year))
 
 # remove extra elements so its just year
-#all_data9$coll_year <- gsub("^[0-9][0-9]/[0-9][0-9]/","",all_data9$coll_year)
+## YOU NEED TO BE CAREFUL HERE AND LOOK AT YOUR SPECIFIC DATA
+  # remove 2-digit month and day when year is first
+all_data9$coll_year <- gsub("/[0-9][0-9]/[0-9][0-9]$","",all_data9$coll_year)
+  # remove 2-digit month and day when year is last
+all_data9$coll_year <- gsub("^[0-9][0-9]/[0-9][0-9]/","",all_data9$coll_year)
+  # etc.....
 #all_data9$coll_year <- gsub("^[0-9]/[0-9][0-9]/","",all_data9$coll_year)
 #all_data9$coll_year <- gsub("^[0-9][0-9]/[0-9]/","",all_data9$coll_year)
 #all_data9$coll_year <- gsub("^[0-9]/[0-9]/","",all_data9$coll_year)
@@ -1161,22 +1152,26 @@ sort(unique(all_data9$coll_year))
 #all_data9$coll_year <- gsub("/[0-9][0-9]$","",all_data9$coll_year)
 #all_data9$coll_year <- gsub("^[0-9][0-9] ","",all_data9$coll_year)
 #all_data9$coll_year <- gsub("^[0-9] ","",all_data9$coll_year)
+  # keep only the first four characters
+  #   1 = first character to keep; 4 = last chracter to keep
+all_data9$coll_year <- substr(all_data9$coll_year, 1, 4)
 
 # make column numeric
-#all_data9$coll_year <- as.numeric(all_data9$coll_year)
-## IF NEEDED: add first two numbers in year
-#  # assume 2000s if values is less than 21
+all_data9$coll_year <- as.numeric(all_data9$coll_year)
+
+## IF NEEDED: add first two numbers in year [this cannot be fully accurate]
+#  # assume 2000s if values is less than 23
 #all_data9$coll_year[which(all_data9$coll_year < 10)] <-
 #  paste0("200",as.character(all_data9$coll_year[which(all_data9$coll_year < 10)]))
 #all_data9$coll_year <- as.numeric(all_data9$coll_year)
-#all_data9$coll_year[which(all_data9$coll_year < 21)] <-
-#  paste0("20",as.character(all_data9$coll_year[which(all_data9$coll_year < 21)]))
+#all_data9$coll_year[which(all_data9$coll_year < 23)] <-
+#  paste0("20",as.character(all_data9$coll_year[which(all_data9$coll_year < 23)]))
 #all_data9$coll_year <- as.numeric(all_data9$coll_year)
-#  # assume 1900s if values is greater than or equal to 21
+#  # assume 1900s if values is greater than or equal to 23
 #all_data9$coll_year[which(all_data9$coll_year < 100)] <-
 #  paste0("19",as.character(all_data9$coll_year[which(all_data9$coll_year < 100)]))
 #all_data9$coll_year <- as.numeric(all_data9$coll_year)
-#sort(unique(all_data9$coll_year))
+sort(unique(all_data9$coll_year))
 
 ##
 ## E) Lineage number
@@ -1189,8 +1184,8 @@ all_data9[which(all_data9$acc_num == all_data9$lin_num),]$lin_num <- NA
 ## F) Locality
 ##
 
-# create all_locality column (combining all locality data into one column for
-# easy reference)
+# create all_locality column (concatenating all locality data into one column 
+#   for easy reference, especially when geolocating)
 all_data9$latitude <- round(all_data9$lat_dd,digits=4)
 all_data9$longitude <- round(all_data9$long_dd,digits=4)
 all_data9 <- unite(all_data9, "all_locality",
@@ -1202,16 +1197,18 @@ all_data9$all_locality <- gsub("NA","",all_data9$all_locality)
 # if no locality info at all, make it NA
 all_data9$all_locality[which(all_data9$all_locality ==
   " |  |  |  |  |  |  |  |  |  |  |  | ")] <- NA
+head(all_data9$all_locality)
 
 ##
 ## G) Institution type
 ##
 
-# add inst_type for gene bank data (didn't do this for Quercus)
+# add inst_type for gene bank data
 all_data9$inst_type[which(is.na(all_data9$inst_type))] <- "Gene/Seed Bank"
+unique(all_data9$inst_type)
 table(all_data9$inst_type)
-# Botanic Garden    Botanic Garden; Gene/Seed Bank     Gene/Seed Bank
-# 7843              151                                2449
+
+# check data_source column too
 table(all_data9$data_source)
 # ex_situ_BG_survey  FAO-WIEWS   Genesys
 # 9151               1108        184
@@ -1220,6 +1217,11 @@ table(all_data9$data_source)
 ## H) Combine individuals (same institution and accession number)
 ##      so that everything is (hopefully) at the accession-level
 ##
+
+## some institutions provided data at the accession level and some provided it
+## at the individual level; we want everything at the accession level for
+## later analyses, so we will try to combine individuals from the same 
+## accession; this can be tricky...
 
 # preserve original acc_num before removing individual signifiers in a minute
 all_data9$orig_acc_num <- all_data9$acc_num
@@ -1249,7 +1251,7 @@ keep_col <- c(
   # original versions of columns, for reference
   "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
   # OPTIONAL additional taxon metadata
-  "iucnredlist_category","natureserve_rank"#,"taxon_region"
+  "rl_category","ns_rank"#,"taxon_region"
 )
 all_data9 <- all_data9[,keep_col]
 
@@ -1261,7 +1263,7 @@ write.csv(all_data9, file.path(main_dir, exsitu_dir, data_out,
 # fill any spaces in acc_num with dashes
 all_data9$acc_num <- gsub(" ","-",all_data9$acc_num)
 
-# combine duplicates (same acc num)
+# combine duplicates (same acc_num) - this shouldn't happen but can
 all_data9 <- all_data9 %>%
   group_by(inst_short,acc_num,taxon_name_accepted) %>%
   mutate(num_indiv = sum(as.numeric(num_indiv)),
@@ -1272,19 +1274,17 @@ all_data9 <- all_data9 %>%
          all_locality = paste(unique(all_locality),collapse="; ")) %>%
   ungroup() %>%
   distinct(inst_short,acc_num,taxon_name_accepted,.keep_all=T)
-nrow(all_data9) #9381
+nrow(all_data9)
 
 # now we will try to find patterns that identify accession numbers
 # with individual identifiers - we want everything to be at the
-# acccession level, not at the individual level for this analysis
+# accession level, not at the individual level for our analyses
 
 # function to remove individual-specific identifiers (to combine dup accessions)
 # "Expected 1 pieces" warning here is fine
 combine_acc_dups <- function(df,char_cutoff,pattern){
-  # create subset of records with acc_num longer than 9 characters
-  #   (these are usually the ones with plant identifiers; some are missed
-  #    but this gets most of them)
-  check_accnum <- df[which(nchar(df$acc_num)>char_cutoff),]
+  # create subset of records with acc_num greater than or equal to X characters
+  check_accnum <- df[which(nchar(df$acc_num)>=char_cutoff),]
   print(nrow(check_accnum))
   no_check_accnum <- setdiff(df,check_accnum)
   print(nrow(no_check_accnum))
@@ -1309,12 +1309,24 @@ combine_acc_dups <- function(df,char_cutoff,pattern){
 ###  EDITED TO FIT YOUR DATASET !!
 ### Otherwise you will combine records that do not belong together
 
-# can look at what will be combined before we actually combine things...
+# first check the pattern you're using to identify the part of the acc_num that 
+#   represents an individual; for example, the row below should show accession
+#   numbers with a star, which often comes before an individual identifier, 
+#   e.g., 1987-275*A  2021-56783-11*B  --> these are good examples; the pattern
+#   may be "bad" (remove parts of the acc_num that we need), e.g., 23*1988
+#   if you spot something that doesn't work, you need to skip or edit your pattern
 all_data9[which(grepl("\\*",all_data9$acc_num)),]$acc_num
-# now combine...
+# now combine duplicates using the pattern you just checked...
+#   the second input in the function is the minimum number of characters the 
+#   acc_num needs for the pattern to be followed and dups combined; this is 
+#   helpful because usually the longer accession numbers have individual
+#   identifiers; for example, if you had 1987-275*A and 23*1988 show up when you
+#   ran the line above, then you would want to choose 8 as the second input, so
+#   that everything after the * is removed in 1987-275*A and 23*1988 is left
+#   as-is since it does not have an individual identifier
 all_data9 <- combine_acc_dups(all_data9,0,"\\*")
-nrow(all_data9) #8527
-# now we'll repeat for additional patterns and cutoffs
+# now we'll repeat this (checking what will be combined then combining) for 
+#   additional patterns and cutoffs
 sort(all_data9[which(grepl("[A-F]$",all_data9$acc_num)),]$acc_num)
   all_data9 <- combine_acc_dups(all_data9,9,"[A-F]$"); nrow(all_data9)
 sort(all_data9[which(grepl("-[1-9]$",all_data9$acc_num)),]$acc_num)
@@ -1333,29 +1345,26 @@ sort(all_data9[which(grepl("\\.[0-9][0-9]$",all_data9$acc_num)),]$acc_num)
   all_data9 <- combine_acc_dups(all_data9,9,"\\.[0-9][0-9]$"); nrow(all_data9)
 sort(all_data9[which(grepl("\\.[0-9][0-9][0-9]$",all_data9$acc_num)),]$acc_num)
   all_data9 <- combine_acc_dups(all_data9,9,"\\.[0-9][0-9][0-9]$"); nrow(all_data9)
-# can also check which records contain specific elements from above patterns:
-#as.data.frame(all_data7[which(grepl("-DCH-18A;-TF-6A",all_data7$acc_num)),])
-#as.data.frame(all_data7[which(all_data7$acc_num == "1964-0017-00"),])
-
+# etc...[add additional patterns if needed]
+  
 # remove ending separation characters 
 all_data9$acc_num <- mgsub(all_data9$acc_num,
                               c("/$","-$","\\.$"),"",fixed=F)
 unique(all_data9$acc_num)
-
-nrow(all_data9) #8384
+nrow(all_data9)
 
 ##
 ## I) Add Unique ID Column
 ##
 
-# add unique ID column
-# create UID with institution name, acc num, provenance type, and taxon name
-# also remove duplicates based on new UID and sum individuals
-# now create UID and remove dups
+# create UID with institution name, accession number, provenance type, and 
+# taxon name; also remove duplicates based on new UID and sums individuals
+  # keep native UIDs from Genesys
 need_id <- all_data9[which(is.na(all_data9$UID)),]
 dont_need_id <- all_data9[which(!is.na(all_data9$UID)),]
 nms <- names(need_id)
 nrow(need_id)
+  # create UID
 need_id <- need_id %>%
   arrange(orig_lat,locality) %>%
   mutate(UID = paste(inst_short,acc_num,prov_type,taxon_name_accepted,sep="~")) %>%
@@ -1365,13 +1374,14 @@ need_id <- need_id %>%
   ungroup() %>%
   select(c("UID",all_of(nms)))
 all_data9 <- rbind(need_id,dont_need_id)
-nrow(all_data9) #8380
+nrow(all_data9)
 
 ################################################################################
 # 7. Summary statistics
 ################################################################################
 
-## SELECT ONLY THE COLUMNS YOU WANT one last time (see keep_col object created above)
+## SELECT ONLY THE COLUMNS YOU WANT one last time (see keep_col object created 
+##   above)
 data_sel <- all_data9[,keep_col]
 
 # write file
@@ -1427,8 +1437,12 @@ need_geo <- data_sel %>%
   filter((is.na(lat_dd) & prov_type != "H" &
             !is.na(all_locality) & all_locality != "NA") |
          latlong_flag!="")
-nrow(need_geo) #4506
-# condense all_locality duplicates
+nrow(need_geo)
+
+# optionally,
+# condense all_locality duplicates so you only need to geolocate each locality 
+#   once; you can skip this if it's too confusing (does temporarily combine 
+#   records that could be for different taxa)
 need_geo <- need_geo %>%
   group_by(prov_type,lat_dd,long_dd,latlong_det,all_locality) %>%
   mutate(UID = paste0(UID,collapse=" | "),
@@ -1438,28 +1452,40 @@ need_geo <- need_geo %>%
   ungroup() %>%
   distinct(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
            latlong_uncertainty,latlong_det,geolocated_by,latlong_notes,
-           all_locality,county,state,country,latlong_flag) %>%
+           all_locality,county,state,country,latlong_flag)
+
+# select just the columns we need for geolocating
+need_geo <- need_geo %>%
   select(UID,inst_short,taxon_name_accepted,prov_type,lat_dd,long_dd,
          latlong_uncertainty,latlong_det,geolocated_by,latlong_notes,
          all_locality,county,state,country,latlong_flag)
-nrow(need_geo) #2907
+nrow(need_geo)
 head(need_geo)
+
 # optionally, flag records for taxa that are highest priority for geolocating;
 #   e.g., threatened and/or have less than 15 wild accessions
-#   (you can choose whatever threshold you want)
+#   (you can choose whatever threshold(s) you want)
   # thresholds
-rl_threat <- c("CR (Critically Endangered)","EN (Endangered)","VU (Vulnerable)")
+rl_threat <- c("Critically Endangered","Endangered","Vulnerable")
 ns_threat <- c("G1 (Critically Imperiled)","G2 (Imperiled)","G3 (Vulerable)")
 few_wild <- geo_needs[geo_needs$num_wild<15,]$taxon_name_accepted
-  # flag priority taxa
+  # get list of priority taxa
 priority_taxa <- taxon_list %>%
-  filter(iucnredlist_category %in% rl_threat |
-         natureserve_rank %in% ns_threat |
+  filter(rl_category %in% rl_threat |
+         ns_rank %in% ns_threat |
          taxon_name %in% few_wild) %>%
-  select(taxon_name_accepted)
-priority_taxa$priority <- "Priority"
-need_geo <- left_join(need_geo,priority_taxa)
-table(need_geo$priority) #456
+  distinct(taxon_name_accepted)
+priority_taxa <- priority_taxa[,1]
+priority_taxa <- paste(priority_taxa, collapse="|")
+  # flag priority taxa
+need_geo$priority <- NA
+need_geo[which(grepl(priority_taxa,need_geo$taxon_name_accepted)),]$priority <- "Priority"
+table(need_geo$priority)
+
+# replace NA with "" for easier viewing when geolocating
+need_geo$lat_dd <- as.character(need_geo$lat_dd)
+need_geo$long_dd <- as.character(need_geo$long_dd)
+need_geo[is.na(need_geo)] <- ""
 
 # write file
 write.csv(need_geo, file.path(main_dir, exsitu_dir,data_out,
@@ -1474,42 +1500,41 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,data_out,
 ### We will read this in next!
 
 ################################################################################
-# 9. Add geolocated data, after manual geolocation
+# 9. (If you geolocated) Add geolocated data, after manual geolocation
 ################################################################################
 
 # read in all compiled ex situ data (exported above)
-exsitu <- read.csv(file.path(main_dir, exsitu_dir,data_out,
-  "All_ExSitu_Compiled_2022-12-07.csv"), header = T, colClasses="character")
+exsitu <- read.csv(file.path(main_dir, exsitu_dir, data_out,
+  "All_ExSitu_Compiled_2023-06-01.csv"), #change this to your version!
+  header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset
-geo_raw <- read.csv(file.path(main_dir, exsitu_dir,data_out,
-  "ExSitu_Need_Geolocation_2022-12-07_Geolocated.csv"),
-  header = T, colClasses="character")
+geo_raw <- read.csv(file.path(main_dir, exsitu_dir, data_out,
+  "ExSitu_Need_Geolocation_2023-06-01_Geolocated.csv"), #change this to your version!
+  header = T, colClasses="character", na.strings = c("NA",""))
 head(geo_raw)
-  # check this is just NA and no "priority" records that are not geolocated
+  # check this is just NA, meaning no "priority" records are not geolocated
 unique(geo_raw[which(is.na(geo_raw$latlong_det)),"priority"])
 
 # add geolocated coordinates to ex situ data
   # separate UID row
 geolocated <- separate_rows(geo_raw, UID, sep=" \\| ")
-#OLD: geolocated <- separate_rows(geo_raw, UID, sep="\\|;\\|")
-#OLD: geolocated$UID <- gsub("UCalifornia BGerkeley","UCaliforniaBGBerkeley",geolocated$UID)
-  # keep only edited rows (lat, long, latlong_det) and
-  #   records that have latlong_det filled in
+  # keep only edited columns and records that have latlong_det filled in
 geolocated <- geolocated %>%
-  select(UID,lat_dd,long_dd,latlong_det,latlong_uncertainty,geolocated_by,
-         latlong_notes,county,state) %>%
+  select(UID,prov_type,lat_dd,long_dd,latlong_uncertainty,latlong_det,
+         geolocated_by,latlong_notes) %>%
   filter(!is.na(latlong_det))
 head(geolocated)
 table(geolocated$latlong_det)
   # select geolocated rows in full dataset and remove cols we want to add
 exsitu_geo <- exsitu %>%
   filter(UID %in% geolocated$UID) %>%
-  select(-lat_dd,-long_dd,-latlong_det,-latlong_uncertainty,-county,-state)
+  select(-prov_type,-lat_dd,-long_dd,-latlong_uncertainty,-latlong_det,
+         -geolocated_by,-latlong_notes)
     # these two values should be the same:
-nrow(exsitu_geo) #1941
-nrow(geolocated) #1941
-  # add geolocation data
+nrow(exsitu_geo)
+nrow(geolocated)
+  # add geolocation data; should just print "Joining with `by = join_by(UID)`"
 exsitu_geo <- full_join(exsitu_geo,geolocated)
   # join geolocated rows with rest of ex situ rows
 exsitu_no_geo <- exsitu %>%
@@ -1529,23 +1554,23 @@ keep_col <- c(
   "lat_dd","long_dd","latlong_flag","latlong_det","latlong_uncertainty",
   "geolocated_by","latlong_notes",
   "all_locality","locality","municipality","county","state","country",
-  "latlong_country","assoc_sp",
+  "latlong_country","assoc_sp",#"habitat",
   # source
   "orig_source","lin_num","coll_name","coll_num","coll_year",
   # material info
   "num_indiv","germ_type","garden_loc","rec_as",
   # other metadata
-  "notes","filename","submission_year","data_source",#"dataset_year",
+  "notes","filename","submission_year","data_source",#"condition","dataset_year","private",
   # taxon name details
   "taxon_name","taxon_full_name_orig","taxon_full_name_concat",
   "genus","species","infra_rank","infra_name","hybrid","cultivar",
-  "taxon_name_status","taxon_verif","author",
+  "taxon_name_status","taxon_verif",#"author","trade_name",
   # institution metadata
   "inst_country","inst_lat","inst_long","inst_type",
   # original versions of columns, for reference
   "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
   # OPTIONAL additional taxon metadata
-  "iucnredlist_category","natureserve_rank","fruit_nut"#,"taxon_region"
+  "rl_category","ns_rank"#,"taxon_region"
 )
 exsitu_all <- exsitu_all[,keep_col]
 
@@ -1554,8 +1579,8 @@ write.csv(exsitu_all, file.path(main_dir, exsitu_dir, data_out,
   paste0("All_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 # write to in situ folder also
-write.csv(exsitu_all, file.path(main_dir, occ_dir, 
-                                "raw_occurrence_data", "Ex-situ",
+write.csv(exsitu_all, file.path(main_dir, occ_dir, "raw_occurrence_data", 
+                                "Ex-situ",
   paste0("ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 
@@ -1630,6 +1655,8 @@ lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
 ### !!!
 ### ! NOW GO GEOLOCATE !
 ### !!!
+
+
 
 
 

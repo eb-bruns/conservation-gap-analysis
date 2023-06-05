@@ -4,7 +4,7 @@
 #   International-US, UC Davis Arboretum & Botanic Garden
 ### Funding: Institute of Museum and Library Services
 #   (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum)
-### Last Updated: May 2023 ; first written Dec 2020
+### Last Updated: June 2023 ; first written Dec 2020
 ### R version 4.2.2
 
 ### DESCRIPTION:
@@ -78,16 +78,23 @@ if(!dir.exists(file.path(main_dir, gis_dir)))
 exsitu_dir <- "exsitu_data"
 if(!dir.exists(file.path(main_dir, exsitu_dir)))
   dir.create(file.path(main_dir, exsitu_dir), recursive=T)
+raw_exsitu <- "raw_exsitu_data"
 if(!dir.exists(file.path(main_dir, exsitu_dir, "raw_exsitu_data")))
   dir.create(file.path(main_dir, exsitu_dir, "raw_exsitu_data"), recursive=T)
+standardized_exsitu <- "standardized_exsitu_data"
 if(!dir.exists(file.path(main_dir, exsitu_dir, "standardized_exsitu_data")))
   dir.create(file.path(main_dir, exsitu_dir, "standardized_exsitu_data"), recursive=T)
-
 # you will add folders and files here when you gather and process ex situ data
 
 occ_dir <- "occurrence_data"
 if(!dir.exists(file.path(main_dir, occ_dir)))
   dir.create(file.path(main_dir, occ_dir), recursive=T)
+raw_occ <- "raw_occurrence_data"
+if(!dir.exists(file.path(main_dir, occ_dir, "raw_occurrence_data")))
+  dir.create(file.path(main_dir, occ_dir, "raw_occurrence_data"), recursive=T)
+standardized_occ <- "standardized_occurrence_data"
+if(!dir.exists(file.path(main_dir, occ_dir, "standardized_occurrence_data")))
+  dir.create(file.path(main_dir, occ_dir, "standardized_occurrence_data"), recursive=T)
 # you will add folders and files here as you get, compile, refine, and visualize
 #   occurrence data throughout the spatial-analysis-workflow sequence
 

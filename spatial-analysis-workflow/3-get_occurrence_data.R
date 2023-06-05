@@ -49,10 +49,11 @@
   #   Gap-analysis-workflow_metadata workbook.
 
 ### INPUTS:
-  ## target_taxa_with_synonyms.csv
+  ## (optional) target_taxa_with_synonyms.csv
   #   List of target taxa and synonyms; see example in the "Target taxa list"
   #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
   #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
+  ## You can also create this by hand if you have a short list.
 
 ### OUTPUTS:
   ## All outputs are optional; you simply run whichever sections you want, and 
@@ -96,14 +97,14 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 # read in taxa list
 taxon_list <- read.csv(file.path(main_dir,taxa_dir,
                                  "target_taxa_with_synonyms.csv"),
-  header = T, colClasses="character")
+                       header=T, colClasses="character",na.strings=c("","NA"))
 head(taxon_list); nrow(taxon_list)
 
 # list of target taxon names
 taxon_names <- sort(taxon_list$taxon_name)
 
 # create list of species names as well, to do initial removal of non-target 
-#   taxa (we do full name match in next script)
+#   taxa when downloading at the genus level; full name match in next script
 target_sp_names <- unique(sapply(taxon_list$taxon_name, function(x)
   unlist(strsplit(x," var. | subsp. | f. "))[1]))
 
@@ -124,7 +125,7 @@ target_sp_names <- unique(sapply(taxon_list$taxon_name, function(x)
 ## Note that if you have a long taxa list, the downloaded data may be very
 #  large; if this makes it unworkable for your computer setup, you may need to 
 #  skip writing the files and move directly to 4-compile_occurrence_data.R to
-#  compile and filter (edits will be needed in this script and script 4to make 
+#  compile and filter (edits will be needed in this script and script 4 to make 
 #  that work)
 
 
@@ -497,14 +498,6 @@ idigbio_raw <- idigbio_raw %>%
   rename("license" = "dcterms.license",
          "references" = "dcterms.references",
          "nativeDatabaseID" = "coreid")
-
-###
-### STANDARDIZE THE DATA
-### Run this section no matter which option your chose for getting the data !!
-###
-
-# add database column
-idigbio_raw$database <- "iDigBio"
 # create species_name column
 idigbio_raw$species_name <- NA
 idigbio_raw$species_name <- sapply(idigbio_raw$taxon_name, function(x)
@@ -515,6 +508,14 @@ idigbio_raw2 <- idigbio_raw %>%
 print("Species removed; if you want to keep any of these, add them to your target taxa list...")
 unique(setdiff(idigbio_raw,idigbio_raw2)[,"taxon_name"])
 idigbio_raw <- idigbio_raw2; rm(idigbio_raw2)
+
+###
+### STANDARDIZE THE DATA
+### Run this section no matter which option your chose for getting the data !!
+###
+
+# add database column
+idigbio_raw$database <- "iDigBio"
 # check a few standards and recode if needed
   # establishmentMeans
 idigbio_raw$establishmentMeans <- str_to_upper(idigbio_raw$establishmentMeans)
@@ -791,9 +792,11 @@ seinet_raw$species_name <- NA
 seinet_raw$species_name <- sapply(seinet_raw$taxon_name, function(x)
   unlist(strsplit(x," var. | subsp. | f. "))[1])
 # keep only target species
-seinet_raw <- seinet_raw %>%
+seinet_raw2 <- seinet_raw %>%
   filter(species_name %in% target_sp_names)
-nrow(seinet_raw)
+print("Species removed; if you want to keep any of these, add them to your target taxa list...")
+unique(setdiff(seinet_raw,seinet_raw2)[,"taxon_name"])
+seinet_raw <- seinet_raw2; rm(seinet_raw2)
 # check a few standards and recode if needed
   # basisOfRecord
 seinet_raw$basisOfRecord <- str_to_upper(seinet_raw$basisOfRecord)

@@ -58,8 +58,8 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 # read in taxa list
 taxon_list <- read.csv(file.path(main_dir,taxa_dir,
                                  "target_taxa_with_synonyms.csv"), 
-                       header = T,na.strings=c("","NA"),colClasses="character")
-nrow(taxon_list) #39
+                       header=T, colClasses="character",na.strings=c("","NA"))
+nrow(taxon_list)
 # see target genus/genera name(s) - you'll use these in a minute
 unique(separate(taxon_list,taxon_name,into="genus",extra="drop")[1])
 

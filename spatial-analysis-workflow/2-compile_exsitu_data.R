@@ -499,8 +499,7 @@ all_data2 <- all_data
 # read in target taxa list
 taxon_list <- read.csv(file.path(main_dir, taxa_dir,
                                  "target_taxa_with_synonyms.csv"),
-                       header = T, na.strings = c("","NA"), 
-                       colClasses = "character")
+                       header=T, colClasses="character",na.strings=c("","NA"))
 str(taxon_list)
 
 # preserve original taxon name before we edit

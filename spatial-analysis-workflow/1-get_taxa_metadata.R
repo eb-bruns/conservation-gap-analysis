@@ -8,7 +8,7 @@
 #   Moderate edits were added with funding from a cooperative agreement
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
-### Last Updated: May 2023 ; first written Dec 2020
+### Last Updated: June 2023 ; first written Dec 2020
 ### R version 4.2.2
 
 ### DESCRIPTION:
@@ -37,7 +37,9 @@
 # Load libraries
 ################################################################################
 
-my.packages <- c("tidyverse","countrycode","textclean","data.table")
+my.packages <- c('tidyverse','countrycode','textclean','data.table')
+# versions I used (in the order listed above): 2.0.0, 1.5.0, 0.9.3, 1.14.8
+
 #install.packages(my.packages) # turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
   rm(my.packages)
@@ -79,7 +81,7 @@ if(!dir.exists(file.path(main_dir, taxa_dir, output_dir)))
 # FIRST, download raw data
   # Go to https://www.iucnredlist.org/search
   # Click "Login/Register" in top bar; create an account if you don't have one,
-  # then log in to your account
+  #   then log in to your account
   # Open the "Taxonomy" tab in the left bar
   #   Either search for your target genus/genera or simply check "Plantae" to 
   #   download data for all plant species that have assessments globally (~60MB)
@@ -92,7 +94,10 @@ if(!dir.exists(file.path(main_dir, taxa_dir, output_dir)))
   #   Under "Saved downloads" click "Download" for your recent search
   # Move the downloaded folder to your "taxa_metadata" folder and rename it
   #   simply "redlist_species_data"
-
+## Note that there is also an API you can use via the rredlist package, that 
+#   has a 'rl_occ_country' function to get the occurrence countries; I had 
+#   various issues with the API so decided to do it manually for now, but you
+#   could test the function if desired.
 
 ## RED LIST CATEGORY
 

@@ -8,7 +8,7 @@
 #   Moderate edits were added with funding from a cooperative agreement
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
-### Last Updated: May 2023 ; first written Dec 2019
+### Last Updated: June 2023 ; first written Dec 2019
 ### R version 4.2.2
 
 ### DESCRIPTION:
@@ -105,6 +105,9 @@
 
 my.packages <- c('plyr','tidyverse','textclean','CoordinateCleaner',
                  'data.table','terra','tidyterra')
+# versions I used (in the order listed above): 1.8.8, 2.0.0, 0.9.3, 2.0-20,
+#                                              1.14.8, 1.7-29, 0.4.0
+
 # install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -122,14 +125,6 @@ distinct <- dplyr::distinct
 
 # use 0-set_working_directory.R script:
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
-
-# set folders where you have raw data (in) and want processed data to go (out)
-data_in <- "raw_exsitu_data"
-data_out <- "standardized_exsitu_data"
-
-# create output folder if not already present
-if(!dir.exists(file.path(main_dir, exsitu_dir, data_out)))
-dir.create(file.path(main_dir, exsitu_dir, data_out), recursive=T)
 
 ################################################################################
 # Load functions
@@ -196,7 +191,7 @@ read.exsitu.csv <- function(path,submission_year){
 # "inst_short" institution nickname] 2) a submission year, 3) an accession
 # number if one isn't given
 ### CHANGE BASED ON FOLDER(S) AND YEAR(S) YOU HAVE...
-all_data <- read.exsitu.csv(file.path(main_dir, exsitu_dir, data_in,
+all_data <- read.exsitu.csv(file.path(main_dir, exsitu_dir, raw_exsitu,
                                       "exsitu_standard_column_names"), "2022")
 # stack all data if you had multiple years:
 #to_stack <- list(raw_2022,raw_2021,raw_2020,raw_2019,raw_2018,raw_2017)
@@ -359,14 +354,14 @@ all_data$latlong_notes <- NA
 
 # load data
   # collection site description
-genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/coll.csv")
+genPath <- file.path(main_dir, exsitu_dir, raw_exsitu, "genesys-accessions/coll.csv")
   # I think the "Found and resolved improper quoting" warning is ok
 gen_col <- data.table::fread(file = genPath, header = TRUE, 
                              na.strings=c("NA",""))
   str(gen_col)
   nrow(gen_col) ; length(unique(gen_col$genesysId))
   # metadata about record
-genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/core.csv")
+genPath <- file.path(main_dir, exsitu_dir, raw_exsitu, "genesys-accessions/core.csv")
 gen_core <- data.table::fread(genPath, header = TRUE,
                               na.strings=c("NA",""))
 str(gen_core)
@@ -374,7 +369,7 @@ str(gen_core)
   # spatial info
   #   for some reason the headers don't read in correctly with fread;
   #   will use read.csv just to get the headers and add them to the fread df
-genPath <- file.path(main_dir, exsitu_dir, data_in, "genesys-accessions/geo.csv")
+genPath <- file.path(main_dir, exsitu_dir, raw_exsitu, "genesys-accessions/geo.csv")
 gen_geo <- data.table::fread(genPath, header = TRUE,
                              na.strings=c("NA",""))
   str(gen_geo)
@@ -451,7 +446,7 @@ nrow(all_data)
 #   rename to "Wiews-Exsitu.csv"
 
 # read in data
-wiews <- read.csv(file.path(main_dir, exsitu_dir, data_in, "Wiews_Exsitu.csv"))
+wiews <- read.csv(file.path(main_dir, exsitu_dir, raw_exsitu, "Wiews_Exsitu.csv"))
 str(wiews)
 
 # filter out Genesys data
@@ -714,7 +709,7 @@ nrow(check); check
   # IF YOU FIND MISSPELLINGS AND/OR ADDITIONAL SYNONYMS, YOU CAN ADD THEM TO
   #   YOUR TARGET TAXA LIST AND GO BACK TO THE START OF SECTION 4 AND RUN AGAIN 
   #   FROM THERE
-write.csv(check, file.path(main_dir, exsitu_dir,data_out,
+write.csv(check, file.path(main_dir, exsitu_dir,standardized_exsitu,
                            paste0("ExSitu_Unmatched_Species_", Sys.Date(), 
                                   ".csv")),row.names = F)
 
@@ -771,7 +766,7 @@ gen_summary <- all_data6 %>%
 gen_summary
 # write file
 write.csv(gen_summary, 
-          file.path(main_dir, exsitu_dir, data_out,
+          file.path(main_dir, exsitu_dir, standardized_exsitu,
                     paste0("Genera_Institutions_Summary_", Sys.Date(), ".csv")),
           row.names = F)
 
@@ -890,7 +885,7 @@ sort(unique(all_data7$num_indiv))
 # remove records with no individuals (first save as separate file)
 no_indiv <- all_data7[which(all_data7$num_indiv == 0),]
 nrow(no_indiv)
-write.csv(no_indiv, file.path(main_dir, exsitu_dir, data_out,
+write.csv(no_indiv, file.path(main_dir, exsitu_dir, standardized_exsitu,
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # save to in situ data folder as well
 if(!dir.exists(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ")))
@@ -1256,7 +1251,7 @@ keep_col <- c(
 all_data9 <- all_data9[,keep_col]
 
 # save version without duplicates combined, in cases needed for reference
-write.csv(all_data9, file.path(main_dir, exsitu_dir, data_out,
+write.csv(all_data9, file.path(main_dir, exsitu_dir, standardized_exsitu,
                               paste0("ExSitu_Compiled_No-Dups-Combined_", 
                                      Sys.Date(), ".csv")),row.names = F)
 
@@ -1385,13 +1380,13 @@ nrow(all_data9)
 data_sel <- all_data9[,keep_col]
 
 # write file
-write.csv(data_sel, file.path(main_dir, exsitu_dir,data_out,
+write.csv(data_sel, file.path(main_dir, exsitu_dir,standardized_exsitu,
   paste0("All_ExSitu_Compiled_", Sys.Date(), ".csv")),row.names = F)
 
 # [OPTIONAL] regional subsets for easier use if lots of data:
 #meso <- data_sel %>% filter(grepl("Mesoamerica",taxon_region))
 #nrow(meso) #6514
-#write.csv(meso, file.path(main_dir, exsitu_dir,data_out,
+#write.csv(meso, file.path(main_dir, exsitu_dir,standardized_exsitu,
 #  paste0("Mesoamerican-spp_ExSitu_Compiled_", Sys.Date(), ".csv")),
 #  row.names = F)
 
@@ -1426,7 +1421,7 @@ geo_needs <- data_sel %>%
   )
 head(geo_needs,n=20)
 # write file
-write.csv(geo_needs, file.path(main_dir, exsitu_dir,data_out,
+write.csv(geo_needs, file.path(main_dir, exsitu_dir,standardized_exsitu,
   paste0("ExSitu_Geolocation_Needs_Summary_", Sys.Date(), ".csv")),
   row.names = F)
 
@@ -1488,7 +1483,7 @@ need_geo$long_dd <- as.character(need_geo$long_dd)
 need_geo[is.na(need_geo)] <- ""
 
 # write file
-write.csv(need_geo, file.path(main_dir, exsitu_dir,data_out,
+write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
   paste0("ExSitu_Need_Geolocation_", Sys.Date(), ".csv")),row.names = F)
 
 ### NOW MANUALLY GEOLOCATE !
@@ -1504,12 +1499,12 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,data_out,
 ################################################################################
 
 # read in all compiled ex situ data (exported above)
-exsitu <- read.csv(file.path(main_dir, exsitu_dir, data_out,
+exsitu <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
   "All_ExSitu_Compiled_2023-06-01.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset
-geo_raw <- read.csv(file.path(main_dir, exsitu_dir, data_out,
+geo_raw <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
   "ExSitu_Need_Geolocation_2023-06-01_Geolocated.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 head(geo_raw)
@@ -1575,7 +1570,7 @@ keep_col <- c(
 exsitu_all <- exsitu_all[,keep_col]
 
 # write final file
-write.csv(exsitu_all, file.path(main_dir, exsitu_dir, data_out,
+write.csv(exsitu_all, file.path(main_dir, exsitu_dir, standardized_exsitu,
   paste0("All_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 # write to in situ folder also

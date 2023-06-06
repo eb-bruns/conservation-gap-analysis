@@ -89,6 +89,12 @@ lapply(my.packages, require, character.only=TRUE)
 
 # use 0-set_working_directory.R script:
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
+
+# create folder for output data
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,"input_datasets")))
+  dir.create(file.path(main_dir,occ_dir,standardized_occ,"input_datasets"), 
+             recursive=T)
+data_out <- "input_datasets"
     
 ################################################################################
 # Load or create target taxa list
@@ -321,7 +327,7 @@ for(i in 1:length(file_list)){
       "Native" = "NATIVE",
       "Introduced" = "INTRODUCED"))
   # write file
-  write.csv(gbif_raw2, file.path(main_dir,occ_dir,standardized_occ,
+  write.csv(gbif_raw2, file.path(main_dir,occ_dir,standardized_occ,data_out,
     paste0("gbif",i,".csv")),row.names=FALSE)
   rm(gbif_raw); rm(gbif_raw2)
 }
@@ -553,7 +559,7 @@ idigbio_raw <- idigbio_raw %>%
     .default = "UNKNOWN",
     .missing = "UNKNOWN"))
 # write file
-write.csv(idigbio_raw, file.path(main_dir,occ_dir,standardized_occ,
+write.csv(idigbio_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
                                  "idigbio.csv"), row.names=FALSE)
 rm(idigbio_raw)
 
@@ -686,7 +692,7 @@ redlist_raw <- redlist_raw %>%
 redlist_raw$database <- "IUCN_RedList"
 redlist_raw$publisher <- "IUCN Red List of Threatened Species"
 # write file
-write.csv(redlist_raw, file.path(main_dir,occ_dir,standardized_occ,
+write.csv(redlist_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
                                  "redlist.csv"), row.names=FALSE)
 rm(redlist_raw)
 
@@ -836,7 +842,7 @@ seinet_raw <- seinet_raw %>%
     "WILD COLLECTION" = "WILD",
     .default = "CULTIVATED"))
 # write file
-write.csv(seinet_raw, file.path(main_dir,occ_dir,standardized_occ,
+write.csv(seinet_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
                                 "seinet.csv"), row.names=FALSE)
 rm(seinet_raw)
 
@@ -961,8 +967,8 @@ bien_raw <- bien_raw %>%
     .missing = "UNCERTAIN")) %>%
   select(-is_cultivated_observation)
 # write file
-write.csv(bien_raw, file.path(main_dir,occ_dir,standardized_occ,"bien.csv"),
-  row.names=FALSE)
+write.csv(bien_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
+                              "bien.csv"), row.names=FALSE)
 rm(bien_raw)
 
 
@@ -1215,8 +1221,8 @@ fia_raw <- fia_raw %>%
     decimalLongitude,database,species_name,establishmentMeans,
     basisOfRecord,datasetName,rightsHolder,individualCount)
 # write file
-write.csv(fia_raw, file.path(main_dir,occ_dir,standardized_occ,"fia.csv"),
-  row.names=FALSE)
+write.csv(fia_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
+                             "fia.csv"), row.names=FALSE)
 rm(fia_raw)
 
 
@@ -1295,7 +1301,7 @@ exsitu_raw <- exsitu_raw %>%
          stateProvince,country)
 head(exsitu_raw)
 # write file
-write.csv(exsitu_raw, file.path(main_dir,occ_dir,standardized_occ,"exsitu.csv"),
-          row.names=FALSE)
+write.csv(exsitu_raw, file.path(main_dir,occ_dir,standardized_occ,data_out,
+                                "exsitu.csv"), row.names=FALSE)
 rm(exsitu_raw)
 

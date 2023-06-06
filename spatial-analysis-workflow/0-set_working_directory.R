@@ -90,8 +90,8 @@ occ_dir <- "occurrence_data"
 if(!dir.exists(file.path(main_dir, occ_dir)))
   dir.create(file.path(main_dir, occ_dir), recursive=T)
 raw_occ <- "raw_occurrence_data"
-if(!dir.exists(file.path(main_dir, occ_dir, "raw_occurrence_data")))
-  dir.create(file.path(main_dir, occ_dir, "raw_occurrence_data"), recursive=T)
+if(!dir.exists(file.path(main_dir, occ_dir, "raw_occurrence_downloads")))
+  dir.create(file.path(main_dir, occ_dir, "raw_occurrence_downloads"), recursive=T)
 standardized_occ <- "standardized_occurrence_data"
 if(!dir.exists(file.path(main_dir, occ_dir, "standardized_occurrence_data")))
   dir.create(file.path(main_dir, occ_dir, "standardized_occurrence_data"), recursive=T)

@@ -31,23 +31,20 @@
   #   Including any/all of: gbif.csv, idigbio.csv, redlist.csv, seinet.csv, 
   #   bien.csv, fia.csv, exsitu.csv, and/or additional files if added manually 
   #   via instructions provided in that script.
-  ## World_Countries_(Generalized)/World_Countries__Generalized_.shp
-  #   World country boundaries, used to remove points that are in the water; 
-  #   shapefile can be downloaded from
-  #   https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
-  #   and placed in your gis_layers folder; if you ran 2-compile_exsitu_data.R
-  #   you already have this layer downloaded and ready to use.
 
 ### OUTPUTS:
+  ## all_occurrence_data_raw_YYYY_MM_DD.csv
+  #   
+  ## need_geolocation_YYYY_MM_DD.csv
+  #   All occurrence records without valid lat-long but with locality 
+  #   description; these could be manually geolocated if desired, but usually
+  #   that is only needed if you have a rare species without enough records
+  ## occurrence_record_summary_YYYY_MM_DD.csv
+  #   Summary table with one row for each target taxon, listing the number of 
+  #   records with valid lat-long and number with locality description only
   ## "taxon_raw_points" folder
   #   For each taxon in your target taxa list, a CSV of occurrence records with 
   #   valid lat-long coordinates (e.g., Asimina_triloba.csv)
-  ## need_geolocation.csv
-  #   CSV of all occurrence records without valid lat-long but with locality 
-  #   description; these could be manually geolocated if desired
-  ## occurrence_record_summary.csv
-  #   Summary table with one row for each target taxon, listing the number of 
-  #   records with valid lat-long and number with locality description only
   
 ################################################################################
 # Load libraries
@@ -248,58 +245,25 @@ write.csv(all_data, file.path(main_dir,occ_dir,raw_occ,
                                      ".csv")), row.names = F)
 
 ################################################################################
-# Select records that have coordinates and are on land
+# Select records that have coordinates
 ################################################################################
 
-# move forward with subset of points that do have lat and long
-geo_pts <- all_data %>% dplyr::filter(is.na(flag))
-nrow(geo_pts)
-no_geo_pts <- all_data %>% dplyr::filter(!is.na(flag))
-
-# check if points are in water and mark
-# you can also skip this if you don't mind the water points - can take 
-# a few minutes or more to buffer and intersect the polygons
-  # read in world polygons shapefile
-world_polygons <- vect(file.path(main_dir,gis_dir,
-   "World_Countries_(Generalized)/World_Countries__Generalized_.shp"))                             
-  # add 1km buffer to ecoregion layer, so we keep pts close to land;
-  # width is in meters - change as desired; > ~500 threw this error:
-    # "IllegalArgumentException: point array must contain 0 or >1 elements"
-world_buff <- terra::buffer(world_polygons, width=500)
-rm(world_polygons)
-  # make occurrence points a spatial object
-geo_pts_spatial <- vect(
-  cbind(geo_pts$decimalLongitude,geo_pts$decimalLatitude),
-  atts=geo_pts, crs="EPSG:4326")
-  # intersect points with ecoregions layer
-land_pts <- terra::intersect(geo_pts_spatial,world_buff)
-on_land <- as.data.frame(land_pts); nrow(on_land) #2185947
-land_id <- unique(on_land$UID)
-  # flag points not on land (in water)
-geo_pts[which(!(geo_pts$UID %in% land_id)),"flag"] <- "Coordinates in water"
-all_data <- rbind(no_geo_pts,geo_pts)
+# separate out points with locality description but no valid lat-long
 table(all_data$flag)
-  # Coordinates in water  Coordinates invalid 
-  # 10249                 317852
-
-# separate out points with locality description only, including:
-# lat-long is invalid or in water
 locality_pts <- all_data %>% 
   dplyr::filter(!is.na(localityDescription) & !is.na(flag))
-nrow(locality_pts) #326017
-  # save the file, for reference
-write.csv(locality_pts, file.path(main_dir,data,
+nrow(locality_pts)
+  # save the file, for reference; you can geolocate these records if you want, 
+  #   but usually only necessary for rare taxa without enough lat-long records
+write.csv(locality_pts, file.path(main_dir,occ_dir,standardized_occ,
   paste0("need_geolocation_", Sys.Date(), ".csv")),
   row.names = F)
 
-# create final subset of geolocated points which are on land
+# create final subset that is only points with valid lat-long
 geo_pts <- all_data %>% filter(is.na(flag))
-nrow(geo_pts) #2184049
+nrow(geo_pts)
+  # see how many points are from each database
 table(geo_pts$database)
-# BIEN    Ex_situ   FIA      GBIF     iDigBio   IUCN_RedList  NorthAm_herbaria
-# 808255  1429      917467   344725   38286     22429         51458
-
-rm(all_data,geo_pts_spatial,land_pts,no_geo_pts,on_land,world_buff,land_id)
 
 ################################################################################
 # Standardize country code column for checking against lat-long later

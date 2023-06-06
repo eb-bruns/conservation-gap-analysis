@@ -1,170 +1,188 @@
-################################################################################
-
-## 4-compile_occurrence_data.R
-
+### 4-compile_occurrence_data.R
 ### Author: Emily Beckman Bruns
-### Funding: Base script was funded by the Institute of Museum and Library 
-# Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-# Moderate edits were added with funding from a cooperative agreement
-# between the United States Botanic Garden and San Diego Botanic Garden
-# (subcontracted to The Morton Arboretum), with support from
-# Botanic Gardens Conservation International U.S.
-
-### Last updated: 09 December 2022
+### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
+#   International-US, United States Botanic Garden, San Diego Botanic Garden,
+#   Missouri Botanical Garden
+### Funding: Base script funded by the Institute of Museum and Library 
+#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
+#   Moderate edits were added with funding from a cooperative agreement
+#   between the United States Botanic Garden and San Diego Botanic Garden
+#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Last Updated: June 2023 ; first written Feb 2020
 ### R version 4.2.2
 
 ### DESCRIPTION:
-# This script compiles in situ occurrence point data and ex situ (genebank
-# and botanical garden) data. We remove any rows for species not in our
-# target taxa list and standardize some key columns. Records without 
-# coordinates are separated out and saved, then records with coordinates are 
-# saved in taxon-specific files.
-
+  ## This script compiles in situ occurrence point data that was downloaded in
+  #   the 3-get_occurrence_data.R script. We remove any rows for taxa not in our 
+  #   list (target_taxa_with_synonyms.csv), add a UID (universal identifier) 
+  #   that can be used to manually flag points in the maps created in script
+  #   6-visualize_occurrence_data.R, and check the standardization of key 
+  #   columns including localityDescription, year, basisOfRecord,
+  #   establishmentMeans, decimalLatitude, and decimalLongitude. Records without 
+  #   coordinates are separated out and saved, then records with coordinates are 
+  #   saved in taxon-specific files.
+  
 ### INPUTS:
-# target_taxa_with_synonyms.csv
-# occurrence data downloaded in 2-get_occurrence_data.R
+  ## target_taxa_with_synonyms.csv
+  #   List of target taxa and synonyms; see example in the "Target taxa list"
+  #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
+  #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
+  ## occurrence data downloaded in 3-get_occurrence_data.R
+  #   Including any/all of: gbif.csv, idigbio.csv, redlist.csv, seinet.csv, 
+  #   bien.csv, fia.csv, exsitu.csv, and/or additional files if added manually 
+  #   via instructions provided in that script.
+  ## World_Countries_(Generalized)/World_Countries__Generalized_.shp
+  #   World country boundaries, used to remove points that are in the water; 
+  #   shapefile can be downloaded from
+  #   https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
+  #   and placed in your gis_layers folder; if you ran 2-compile_exsitu_data.R
+  #   you already have this layer downloaded and ready to use.
 
 ### OUTPUTS:
-#
-# folder (taxon_raw_points) with CSV of geolocated (have lat-long) data for 
-# each target taxon (e.g., Malus_angustifolia.csv)
-#
-# CSV of all occurrence points without lat-long but with locality description
-#   (need_geolocation.csv)
-#
-# summary table (occurrence_record_summary.csv) with one row for each
-# target taxon, listing the number of records with valid lat-long, and 
-# number of records with locality description only
-#
-
+  ## "taxon_raw_points" folder
+  #   For each taxon in your target taxa list, a CSV of occurrence records with 
+  #   valid lat-long coordinates (e.g., Asimina_triloba.csv)
+  ## need_geolocation.csv
+  #   CSV of all occurrence records without valid lat-long but with locality 
+  #   description; these could be manually geolocated if desired
+  ## occurrence_record_summary.csv
+  #   Summary table with one row for each target taxon, listing the number of 
+  #   records with valid lat-long and number with locality description only
+  
 ################################################################################
 # Load libraries
 ################################################################################
 
-my.packages <- c(
-  'tidyverse','CoordinateCleaner','tidyterra','terra','raster','textclean',
-  'countrycode','data.table'
-)
+my.packages <- c('tidyverse','textclean','data.table','CoordinateCleaner',
+                 'terra','tidyterra','raster','countrycode')
+# versions I used (in the order listed above): 2.0.0, 0.9.3, 1.14.8, 2.0-20,
+#                                              1.7-29, 0.4.0, 3.6-13, 1.5.0
+
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
+
+select <- dplyr::select
 
 ################################################################################
 # Set working directory
 ################################################################################
 
-# either set manually:
-#main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/CWR North America Gap Analysis/Gap-Analysis-Mapping"
-
-# or use 0-set_working_directory.R script:
-source("/Users/emily/Documents/GitHub/SDBG_CWR-trees-gap-analysis/0-set_working_directory.R")
-
-# set up file structure within your main working directory
-data <- "occurrence_data"
-standard <- "standardized_occurrence_data"
-polygons <- "gis_layers"
+# use 0-set_working_directory.R script:
+source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 ################################################################################
 # Read in and compile occurrence point data
 ################################################################################
 
-# create folders for output data
-if(!dir.exists(file.path(main_dir,data)))
-  dir.create(file.path(main_dir,data), recursive=T)
-if(!dir.exists(file.path(main_dir,data,standard,"taxon_raw_points")))
-  dir.create(file.path(main_dir,data,standard,"taxon_raw_points"), recursive=T)
+# create folder for output data
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points")))
+   dir.create(file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points"), 
+             recursive=T)
 
 # read in raw occurrence data
-file_list <- list.files(file.path(main_dir,data,standard), pattern = ".csv", 
-                        full.names = T)
+file_list <- list.files(file.path(main_dir,occ_dir,standardized_occ), 
+                        pattern = ".csv", full.names = T)
 file_dfs <- lapply(file_list, read.csv, header = T, na.strings = c("","NA"),
                    colClasses = "character")
-length(file_dfs) #7
+length(file_dfs)
 
 # stack all datasets using bind_rows, which keeps non-matching columns
-#   and fills with NA; 'Reduce' iterates through list and merges with previous.
-# this may take a few minutes if you have lots of data
-all_data_raw <- Reduce(bind_rows, file_dfs)
-nrow(all_data_raw) #2557129
-names(all_data_raw) #37
-table(all_data_raw$database)
-# BIEN    Ex_situ  FIA     GBIF    iDigBio  IUCN_RedList  NorthAm_herbaria
-# 871544  9318     922368  481187  38256    52322         182134 
-
-# add unique identifier
-nms <- names(all_data_raw)
-all_data_raw <- all_data_raw %>% 
-  dplyr::mutate(UID=paste0('id', sprintf("%08d",1:nrow(all_data_raw)))) %>% 
-  dplyr::select(c('UID', all_of(nms)))
+#   and fills with NA; 'Reduce' iterates through list and merges with previous;
+#   this may take a few minutes if you have lots of data
+all_data <- Reduce(bind_rows, file_dfs)
 rm(nms, file_dfs, file_list)
-
-all_data <- all_data_raw
-rm(all_data_raw)
+nrow(all_data)
+table(all_data$database)
 
 ################################################################################
 # Filter by target taxa
 ################################################################################
 
 # read in target taxa list
-taxon_list <- read.csv(file.path(main_dir,"taxa_metadata",
+taxon_list <- read.csv(file.path(main_dir, taxa_dir,
                                  "target_taxa_with_synonyms.csv"),
-                       header = T, na.strings = c("","NA"),
-                       colClasses = "character")
+                       header=T, colClasses="character",na.strings=c("","NA"))
 target_taxa <- unique(taxon_list$taxon_name)
 # if needed, add columns that separate out taxon name
 taxon_list <- taxon_list %>%
-  separate("taxon_name",c("genus","species","infra_rank","infra_name"),
-           sep=" ",remove=F,fill="right")
+  separate("taxon_name",c ("genus","species","infra_rank","infra_name"),
+           sep=" ", remove=F, fill="right")
+# create species name column
+taxon_list$species_name <- paste(taxon_list$genus,taxon_list$species)
 
-# join data to taxon list
-all_data <- all_data %>% dplyr::select(-genus)
+## join data to taxon list
+all_data <- all_data %>% dplyr::select(-genus,-species_name)
 all_data <- left_join(all_data,taxon_list)
-# join again just by species name if no taxon match
+## join again just by species name if no taxon match
 need_match <- all_data[which(is.na(all_data$taxon_name_status)),]
-nrow(need_match) #59933
-# remove columns from first taxon name match
+nrow(need_match)
+  # remove columns from first taxon name match
 need_match <- need_match[,1:(ncol(all_data)-ncol(taxon_list)+1)]
-# rename column for matching
+  # rename column for matching and get just the genus and specific epithet
 need_match <- need_match %>% rename(taxon_name_full = taxon_name)
-need_match$taxon_name <- need_match$species_name
-# new join
+need_match$taxon_name <- str_split_i(need_match$taxon_name, " var.| subsp.| f.",i = 1)
+  # new join
 need_match <- left_join(need_match,taxon_list)
-# bind together new matches and previously matched
+need_match$taxon_name <- need_match$taxon_name_full
+need_match <- need_match %>% select(-taxon_name_full)
+  # bind together new matches and previously matched
 matched <- all_data[which(!is.na(all_data$taxon_name_status)),]
-matched$taxon_name_full <- matched$taxon_name
 all_data <- rbind(matched,need_match)
-table(all_data$taxon_name_status) # Accepted: 2252608   Synonym: 254542
-# fill in extra data for synonyms
-all_data <- all_data %>% 
-  dplyr::select(-iucnredlist_category,-natureserve_rank,-fruit_nut)
-taxon_list_add <- taxon_list %>% 
-  filter(taxon_name_status == "Accepted") %>%
-  dplyr::select(taxon_name_accepted,iucnredlist_category,natureserve_rank,fruit_nut)
-all_data <- left_join(all_data,taxon_list_add)
+table(all_data$taxon_name_status)
 
 # check names that got excluded.....
 still_no_match <- all_data[which(is.na(all_data$taxon_name_status)),]
-nrow(still_no_match) #49979
+nrow(still_no_match)
 sort(unique(still_no_match$taxon_name))
 table(still_no_match$database)
-rm(matched,need_match,taxon_list_add,still_no_match)
+  # ^ if you want to keep any of these, add them to your target taxa list
+rm(matched,need_match,still_no_match)
 
 # keep only rows for target taxa
-all_data <- all_data %>% 
-  filter(!is.na(taxon_name_status) & !is.na(UID))
-nrow(all_data) #2512150
+all_data <- all_data %>% filter(!is.na(taxon_name_status))
+nrow(all_data)
 
-### ! target taxa with no occurrence data:
+### see which target taxa have no occurrence data:
 unique(taxon_list$taxon_name_acc)[
   !(unique(taxon_list$taxon_name_acc) %in% (unique(all_data$taxon_name_acc)))]
-# none ! wow !
+
+################################################################################
+# Add UID (universal id) column 
+################################################################################
+
+# now we add a UID that can be used to manually flag points in the maps created 
+#   later in script 6-visualize_occurrence_data.R
+
+# !!!
+## IT IS VERY IMPORTANT to be careful here IF you are adding additional 
+#   occurrence data after already compiling and manually vetting (selecting
+#   good/bad points) - you need to be sure any new data are sorted to the *end*
+#   of your dataset before adding the UIDs, otherwise the IDs you've already
+#   used for vetting will change (not good!). If this is your first time running
+#   this script, you're all good.
+## if needed, sort data so any new points are at the end; you can use whatever
+#   field you'd like, but here is an example using the database column:
+#all_data$database <- factor(all_data$database,
+#                            levels = c("BIEN","Ex_situ","FIA","GBIF","iDigBio",
+#                                       "IUCN_RedList","NorthAm_herbaria",
+#                                       "<NEW_DATA>")) #change to your dataset name
+#all_data <- all_data %>% arrange(database)
+
+# add UID
+nms <- names(all_data)
+digits <- nchar(as.character(nrow(all_data)))
+all_data <- all_data %>% 
+  dplyr::mutate(UID=paste0('id', sprintf(paste0("%0",digits,"d"),
+                                         1:nrow(all_data)))) %>% 
+  dplyr::select(c('UID', all_of(nms)))
 
 ################################################################################
 # Standardize/check some key columns
 ################################################################################
 
 # create localityDescription column
-# "NAs introduced by coercion" warning ok
+#   "NAs introduced by coercion" warning ok
 all_data <- all_data %>%
   unite("localityDescription",
         c(locality,municipality,higherGeography,county,stateProvince,country,
@@ -182,12 +200,12 @@ all_data$localityDescription <- gsub("| | | | | | | |", NA,
 head(unique(all_data$localityDescription))
 
 # check year column
-# ex situ years were not standardized so most of those get removed here :(
-# "NAs introduced by coercion" warning ok
+#   if ex situ years were not standardized, most of those get removed here :(
+#   "NAs introduced by coercion" warning ok
 all_data$year <- as.numeric(all_data$year)
 # remove values less than 1500 or greater than current year
 all_data$year[which(all_data$year < 1500 |
-                      all_data$year > as.numeric(format(Sys.time(),"%Y")))] <- NA
+                    all_data$year > as.numeric(format(Sys.time(),"%Y")))] <- NA
 sort(unique(all_data$year))
 
 # check basis of record column
@@ -196,7 +214,7 @@ all_data$basisOfRecord[which(is.na(all_data$basisOfRecord))] <- "UNKNOWN"
 
 # check establishment means
 unique(all_data$establishmentMeans)
-# use this if you need to recode any mistakes:
+# use this example if you need to recode any mistakes:
 #all_data <- all_data %>%
 #  mutate(establishmentMeans = recode(establishmentMeans,
 #    "Introduced" = "INTRODUCED",
@@ -205,30 +223,29 @@ unique(all_data$establishmentMeans)
 all_data$establishmentMeans[which(is.na(all_data$establishmentMeans))] <-
   "UNCERTAIN"
 
-# check validity of lat and long; remove invalid coordinates
-# if coords are both 0, set to NA
+## check validity of lat and long; remove invalid coordinates
+  # if coords are both 0, set to NA
 zero <- which(all_data$decimalLatitude == 0 & all_data$decimalLongitude == 0)
-all_data$decimalLatitude[zero] <- NA; all_data$decimalLongitude[zero] <- NA
-rm(zero)
-# flag non-numeric and not available coordinates and lat > 90, lat < -90,
-# lon > 180, and lon < -180
-coord_test <- cc_val(all_data, lon = "decimalLongitude",lat = "decimalLatitude",
-                     value = "flagged", verbose = TRUE) #Flagged 317852 records.
-# try switching lat and long for invalid points and check validity again
+all_data$decimalLatitude[zero] <- NA; all_data$decimalLongitude[zero] <- NA; rm(zero)
+  # flag non-numeric and not available coordinates, and when not valid, i.e.:
+  #   lat > 90, lat < -90, lon > 180, and lon < -180
+coord_test <- cc_val(all_data, lon = "decimalLongitude", lat = "decimalLatitude",
+                     value = "flagged", verbose = TRUE)
+  # try switching lat and long for invalid points and check validity again
 all_data[!coord_test,c("decimalLatitude","decimalLongitude")] <-
   all_data[!coord_test,c("decimalLongitude","decimalLatitude")]
 coord_test <- cc_val(all_data, lon = "decimalLongitude",lat = "decimalLatitude",
-                     value = "flagged", verbose = TRUE) #Flagged 317852 records.
-# mark these as flagged
+                     value = "flagged", verbose = TRUE)
+  # mark these as flagged
 all_data$flag <- NA
 all_data[!coord_test,]$flag <- "Coordinates invalid"
 rm(coord_test)
 
 # write file of raw data before selecting only geolocated records;
 #   this will be used for the GapAnalysis package's summary of occurrences
-write.csv(all_data, file.path(main_dir,data,"raw_occurrence_data",
-                             paste0("all_occurrence_data_raw_", 
-                                    Sys.Date(), ".csv")),row.names = F)
+write.csv(all_data, file.path(main_dir,occ_dir,raw_occ,
+                              paste0("all_occurrence_data_raw_", Sys.Date(), 
+                                     ".csv")), row.names = F)
 
 ################################################################################
 # Select records that have coordinates and are on land
@@ -236,15 +253,15 @@ write.csv(all_data, file.path(main_dir,data,"raw_occurrence_data",
 
 # move forward with subset of points that do have lat and long
 geo_pts <- all_data %>% dplyr::filter(is.na(flag))
-nrow(geo_pts) #2194298
+nrow(geo_pts)
 no_geo_pts <- all_data %>% dplyr::filter(!is.na(flag))
 
 # check if points are in water and mark
 # you can also skip this if you don't mind the water points - can take 
 # a few minutes or more to buffer and intersect the polygons
   # read in world polygons shapefile
-world_polygons <- vect(file.path(main_dir,polygons,
-   "UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp"))                             
+world_polygons <- vect(file.path(main_dir,gis_dir,
+   "World_Countries_(Generalized)/World_Countries__Generalized_.shp"))                             
   # add 1km buffer to ecoregion layer, so we keep pts close to land;
   # width is in meters - change as desired; > ~500 threw this error:
     # "IllegalArgumentException: point array must contain 0 or >1 elements"

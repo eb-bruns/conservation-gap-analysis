@@ -19,8 +19,8 @@
   #   6-visualize_occurrence_data.R, and check the standardization of key 
   #   columns including localityDescription, year, basisOfRecord,
   #   establishmentMeans, decimalLatitude, and decimalLongitude. Records without 
-  #   coordinates are separated out and saved, then records with coordinates are 
-  #   saved in taxon-specific files.
+  #   coordinates are separated out and saved, then records with coordinates 
+  #   thinned spatially and saved in taxon-specific CSV files.
   
 ### INPUTS:
   ## target_taxa_with_synonyms.csv
@@ -34,7 +34,8 @@
 
 ### OUTPUTS:
   ## all_occurrence_data_raw_YYYY_MM_DD.csv
-  #   
+  #   All occurrence data compiled, before removing any records; this is used
+  #   in the GapAnalysis package
   ## need_geolocation_YYYY_MM_DD.csv
   #   All occurrence records without valid lat-long but with locality 
   #   description; these could be manually geolocated if desired, but usually
@@ -60,6 +61,8 @@ lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
 
 select <- dplyr::select
+filter <- dplyr::filter
+mutate <- dplyr::mutate
 
 ################################################################################
 # Set working directory
@@ -78,7 +81,7 @@ if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points")))
              recursive=T)
 
 # read in raw occurrence data
-file_list <- list.files(file.path(main_dir,occ_dir,standardized_occ), 
+file_list <- list.files(file.path(main_dir,occ_dir,standardized_occ,"input_datasets"), 
                         pattern = ".csv", full.names = T)
 file_dfs <- lapply(file_list, read.csv, header = T, na.strings = c("","NA"),
                    colClasses = "character")
@@ -88,7 +91,7 @@ length(file_dfs)
 #   and fills with NA; 'Reduce' iterates through list and merges with previous;
 #   this may take a few minutes if you have lots of data
 all_data <- Reduce(bind_rows, file_dfs)
-rm(nms, file_dfs, file_list)
+rm(file_dfs, file_list)
 nrow(all_data)
 table(all_data$database)
 
@@ -170,9 +173,9 @@ unique(taxon_list$taxon_name_acc)[
 nms <- names(all_data)
 digits <- nchar(as.character(nrow(all_data)))
 all_data <- all_data %>% 
-  dplyr::mutate(UID=paste0('id', sprintf(paste0("%0",digits,"d"),
+  mutate(UID=paste0('id', sprintf(paste0("%0",digits,"d"),
                                          1:nrow(all_data)))) %>% 
-  dplyr::select(c('UID', all_of(nms)))
+  select(c('UID', all_of(nms)))
 
 ################################################################################
 # Standardize/check some key columns
@@ -240,18 +243,18 @@ rm(coord_test)
 
 # write file of raw data before selecting only geolocated records;
 #   this will be used for the GapAnalysis package's summary of occurrences
-write.csv(all_data, file.path(main_dir,occ_dir,raw_occ,
+write.csv(all_data, file.path(main_dir,occ_dir,standardized_occ,
                               paste0("all_occurrence_data_raw_", Sys.Date(), 
                                      ".csv")), row.names = F)
 
 ################################################################################
-# Select records that have coordinates
+# Select records that have valid coordinates
 ################################################################################
 
 # separate out points with locality description but no valid lat-long
 table(all_data$flag)
 locality_pts <- all_data %>% 
-  dplyr::filter(!is.na(localityDescription) & !is.na(flag))
+  filter(!is.na(localityDescription) & !is.na(flag))
 nrow(locality_pts)
   # save the file, for reference; you can geolocate these records if you want, 
   #   but usually only necessary for rare taxa without enough lat-long records
@@ -270,16 +273,13 @@ table(geo_pts$database)
 ################################################################################
 
 # country name to 3 letter ISO code
-  # fix some issues first (can add anything that is not matched unambiguously)
+  # fix some issues first (can add anything that is not matched unambiguously in
+  # the 'find codes for names' step directly below; then rerun from here)
 geo_pts$country <- mgsub(geo_pts$country,
-    c("Bolívia","Brasil","EE. UU.","ESTADOS UNIDOS DE AMERICA",
-      "México","MÉXICO","Repubblica Italiana","U. S. A.","United Statese",
-      "America","Atats-Unis","CAN","ESP","MA(C)xico","MEX",
-      "MX","PER","Unknown","Cultivated"),
-    c("Bolivia","Brazil","United States","United States",
-      "Mexico","Mexico","Italy","United States","United States",
-      "United States","United States","Canada","Spain","Mexico","Mexico",
-      "Mexico","Peru",NA,NA))
+    c("brasil","EE. UU.","estados unidos","estados unidos de america",
+      "méxico","México"),#matched unambiguously
+    c("Brazil","United States","United States","United States",
+      "Mexico","Mexico")) #country name to use
   # find codes for names
 country_codes1 <- as.data.frame(sort(unique(geo_pts$country))) %>%
   add_column(iso3c = countrycode(sort(unique(geo_pts$country)),
@@ -290,9 +290,11 @@ country_codes1 <- as.data.frame(sort(unique(geo_pts$country))) %>%
 geo_pts <- left_join(geo_pts,country_codes1)
 
 # country code to standard 2 letter ISO code
-  # fix some issues (can add anything that is not matched unambiguously)
+  # fix some issues (can add anything that is not matched unambiguously in the
+  # 'check codes' step directly below; then rerun from here)
 geo_pts$countryCode <- mgsub(geo_pts$countryCode,
-    c("XK","ZZ"),c("RS",NA))
+    c("AUT","CAN","CZE","DEU","MEX","NOR","SWE","USA","ZZ"), #matched unambiguously
+    c("AU","CA","CZ","DE","MX","NO","SE","US",NA)) #2-letter code to use
 geo_pts$countryCode <- str_to_upper(geo_pts$countryCode)
   # check codes 
 country_codes2 <- as.data.frame(sort(unique(geo_pts$countryCode))) %>%
@@ -308,50 +310,56 @@ geo_pts <- geo_pts %>%
         sep=";",remove=T,na.rm=T) %>%
   separate("countryCode_standard","countryCode_standard",sep=";",extra="drop")
 geo_pts$countryCode_standard[which(geo_pts$countryCode_standard == "")] <- NA
+  # see how many records have each country code:
 sort(table(geo_pts$countryCode_standard))
 
 ################################################################################
 # Remove spatial duplicates
 ################################################################################
 
-## this section could potentially be moved to another script
-
-## OTHER WAYS OF REMOVING DUPLICATES ARE ALSO POSSIBLE AND COULD MAKE MORE
-##    SENSE FOR A SPECIFIC WAY OF USING THE POINTS, including
-##    by grid cell, distance between points (e.g., randomly via spThin), etc...
-## The segment below removes spatial duplicates based on rounded latitude
-##    and longitude. This is a simple fix that doesn't involve spatial 
-##    calculations. One additional positive of this method is that you can
-##    choose priority datasets to keep points from; this can also help with 
-##    citations since data from some databases are harder to cite than others.
+## In this section we "thin" our points by removing points that are near each
+#   other, to make the data easier to vet and visualize. depending on your 
+#   target taxa and analysis goals, you may want to filter the points more
+#   or less.
+## There are multiple ways to remove spatial duplicates, such as by grid cell, 
+#   the distance between points (e.g., randomly via a package like spThin), etc.
+## The section below removes spatial duplicates based on rounded latitude
+#   and longitude. This is a simple fix that doesn't involve spatial 
+#   calculations. One additional positive of this method is that you can
+#   choose priority datasets to keep points from; this can also help with 
+#   citations since data from some databases are harder to cite than others.
 
 # first, if you're working at the taxon level, add infrataxon records to their 
-# parent species too
+#   parent species too
 add_again <- geo_pts %>% filter(grepl("var\\.|subsp\\.", taxon_name_accepted))
 unique(add_again$taxon_name_accepted)
-add_again$taxon_name_accepted <- gsub(" var\\.*\\s.+", "",
-                                      add_again$taxon_name_accepted)
+add_again$taxon_name_accepted <- gsub(" var\\.*\\s.+", "",add_again$taxon_name_accepted)
 unique(add_again$taxon_name_accepted)
 geo_pts <- rbind(geo_pts,add_again)
 table(geo_pts$database)
-# BIEN    Ex_situ   FIA      GBIF     iDigBio   IUCN_RedList  NorthAm_herbaria
-# 815391  1530      917467   351671   42525     22893         59884
 
 # create rounded latitude and longitude columns for removing duplicates;
-#   number of digits can be changed based on how dense you want data
+#   number of digits can be changed based on how dense you want data; via this
+#   StackExchange post (https://gis.stackexchange.com/a/8674/7913)...
+#   "The first decimal place is worth up to 11.1 km: it can distinguish the position of one large city from a neighboring large city.
+#    The second decimal place is worth up to 1.1 km: it can separate one village from the next.
+#    The third decimal place is worth up to 110 m: it can identify a large agricultural field or institutional campus.
+#    The fourth decimal place is worth up to 11 m: it can identify a parcel of land. It is comparable to the typical accuracy of an uncorrected GPS unit with no interference."
+#   If your target taxa are rare, you may want more digits; if your target 
+#   taxa are common/widespread, you probably want fewer digits (more points removed)
 geo_pts$lat_round <- round(geo_pts$decimalLatitude,digits=2)
 geo_pts$long_round <- round(geo_pts$decimalLongitude,digits=2)
 
-# create subset of all ex situ points, to add back in at end, if desired
+# create subset of all ex situ points, to add back in at the end, if desired
 ex_situ <- geo_pts[which(geo_pts$database=="Ex_situ"),]
 ex_situ <- ex_situ %>% 
-  dplyr::select(-flag) %>%
+  select(-flag) %>%
   mutate(coordinateUncertaintyInMeters=as.numeric(coordinateUncertaintyInMeters))
 
-# sort before removing duplicates;
+## sort before removing duplicates --
 # whatever you sort to the top will be kept when there is a duplicate further down;
-# you can turn any of these steps on/off, or add others
-  # sort by basis of record
+# you can comment out any of these sorting steps, or add others...
+  ## sort by basis of record
 unique(geo_pts$basisOfRecord)
 geo_pts$basisOfRecord <- factor(geo_pts$basisOfRecord,
   levels = c("PRESERVED_SPECIMEN","MATERIAL_SAMPLE","MATERIAL_CITATION",
@@ -359,47 +367,51 @@ geo_pts$basisOfRecord <- factor(geo_pts$basisOfRecord,
              "MACHINE_OBSERVATION","FOSSIL_SPECIMEN","LIVING_SPECIMEN",
              "UNKNOWN"))
 geo_pts <- geo_pts %>% arrange(basisOfRecord)
-  # sort by establishment means
+  ## sort by establishment means
 unique(geo_pts$establishmentMeans)
 geo_pts$establishmentMeans <- factor(geo_pts$establishmentMeans,
   levels = c("NATIVE","WILD","UNCERTAIN","INTRODUCED","MANAGED","CULTIVATED",
-             "DEAD")) #"INVASIVE"
+             "DEAD"))
 geo_pts <- geo_pts %>% arrange(establishmentMeans)
-  # sort by coordinate uncertainty
+  ## sort by coordinate uncertainty
 geo_pts$coordinateUncertaintyInMeters <-
   as.numeric(geo_pts$coordinateUncertaintyInMeters)
 geo_pts <- geo_pts %>% arrange(geo_pts$coordinateUncertaintyInMeters)
-  # sort by year
+  ## sort by year
 geo_pts <- geo_pts %>% arrange(desc(year))
-  # sort by source database
+  ## sort by source database
+      # in the past I've sorted GBIF first since it's easier to cite, but you
+      #   may want NorthAm_herbaria first since it has a nice link to the 
+      #   herbariun specimen, which experts can use to review the record
 unique(geo_pts$database)
 geo_pts$database <- factor(geo_pts$database,
   levels = c("GBIF","iDigBio","IUCN_RedList","NorthAm_herbaria",
              "FIA","BIEN","Ex_situ"))
 geo_pts <- geo_pts %>% arrange(database)
 
-# remove duplicates
-# can create "all_source_databases" column, to capture
-#    databases from which duplicates were removed
-# can take a while to remove duplicates if there are lots a rows
+## remove duplicates --
+# also creating an "all_source_databases" column to capture a list of all
+#   databases from which duplicates were removed; this step can take a while 
+#   if there are lots a rows
 geo_pts2 <- geo_pts %>%
   group_by(taxon_name_accepted,lat_round,long_round) %>%
   mutate(all_source_databases = paste(unique(database), collapse = ', ')) %>%
   distinct(taxon_name_accepted,lat_round,long_round,.keep_all=T) %>%
   ungroup() %>%
-  dplyr::select(-flag)
-nrow(geo_pts2) #366757
+  select(-flag)
+nrow(geo_pts2)
 
 # add ex situ data back in
 geo_pts2 <- full_join(geo_pts2,ex_situ)
-nrow(geo_pts2) #367559
+nrow(geo_pts2)
 
-## set header/column name order
-keep_col <- c( #data source and unique ID
+## set header/column name order and keep only necessary columns
+keep_col <- c( 
+  #universal ID and source database
   "UID","database","all_source_databases",
   #taxon
-  "taxon_name_accepted",
-  "taxon_name","scientificName","family","genus","specificEpithet",
+  "taxon_name_accepted","taxon_name_status",
+  "taxon_name","scientificName","genus","specificEpithet",
   "taxonRank","infraspecificEpithet","taxonIdentificationNotes",
   #event
   "year","basisOfRecord",
@@ -415,43 +427,38 @@ keep_col <- c( #data source and unique ID
   "localityDescription","locality","verbatimLocality",
   "locationNotes","municipality","higherGeography","county",
   "stateProvince","country","countryCode","countryCode_standard",
-  #additional optional data
-  "taxon_name_status","iucnredlist_category",
-  "natureserve_rank","fruit_nut")
-# set column order and remove a few unnecessary columns
+  #additional optional taxa metadata
+  "rl_category","ns_rank")
 geo_pts2 <- geo_pts2[,keep_col]
 
 # take a look
 head(as.data.frame(geo_pts2))
-nrow(geo_pts2) #367559
+nrow(geo_pts2)
 table(geo_pts2$database)
-# BIEN    Ex_situ   FIA      GBIF     iDigBio   IUCN_RedList  NorthAm_herbaria
-# 12703   1530      160099   176790   10345     3969          8879
 rm(geo_pts)
 
-# write file if you'd like
-#write.csv(geo_pts2, file.path(main_dir,data,standard,
-#  paste0("Occurrences_Compiled_", Sys.Date(), ".csv")),row.names = F)
+# write file if you'd like; not necessary since we write taxon-level files
+#write.csv(geo_pts2, file.path(main_dir,occ_dir,standardized_occ,
+#  paste0("all_occurrence_data_compiled_", Sys.Date(), ".csv")), row.names = F)
 
 ################################################################################
-# 6. Look at results
+# Create taxon-level summary table
 ################################################################################
 
 # summarize results for each target taxon
-  # lat-long records
+  # count lat-long records
 count_geo <- geo_pts2 %>% count(taxon_name_accepted)
 names(count_geo)[2] <- "num_latlong_records"
-  # locality-only records (invalid coords or in water)
+  # count records with invalid lat-long but have locality description
 count_locality <- locality_pts %>% count(taxon_name_accepted)
 names(count_locality)[2] <- "num_locality_records"
   # make table
 files <- list(count_geo,count_locality)
 summary <- setorder(Reduce(full_join, files),num_latlong_records,na.last=F)
-head(summary)
+summary
   # write file
-write.csv(summary, file.path(main_dir,data,
+write.csv(summary, file.path(main_dir,occ_dir,standardized_occ,
   paste0("occurrence_record_summary_", Sys.Date(), ".csv")),row.names = F)
-#as.data.frame(summary)
 
 ################################################################################
 # Split by species to save
@@ -464,5 +471,5 @@ names(sp_split) <- gsub("\\.","",names(sp_split))
 
 # write files
 lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
-  file.path(main_dir,data,standard,"taxon_raw_points",
+  file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points",
   paste0(names(sp_split)[[i]],".csv")),row.names = F))

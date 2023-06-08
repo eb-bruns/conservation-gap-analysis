@@ -35,19 +35,17 @@
 #    List of target taxa and synonyms; see example in the "Target taxa list"
 #    tab in Gap-analysis-workflow_metadata workbook
 #
-# 4. (optionally) Accession-level data downloads from two international crop 
+# 4. world_countries_10m.shp
+#    Shapefile created in 1-prep_gis_layers.R script. It's the Natural Earth 
+#    10m countries layer with the lakes cut out and some ISO_2A issues fixed.
+#
+# 5. (optionally) Accession-level data downloads from two international crop 
 #    genebank databases; download instructions are provided within the script
 # (a) Genesys [Global Crop Diversity Trust]:
 #     https://www.genesys-pgr.org/a/overview
 # (b) WIEWS [FAO's World information and early warning system on plant genetic
 #     resources for food and agriculture]:
 #     https://www.fao.org/wiews/data/ex-situ-sdg-251/search/en/?no_cache=1
-#
-# 5. UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp
-#    World country boundaries used to add the lat-long country for each record
-#    and to check if the given coordinate is in water; shapefile can be downloaded
-#    from https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
-#    and placed in your gis_layers folder
 # 
 # 6. (optionally) ExSitu_Need_Geolocation_YYYY-MM-DD_Geolocated.csv
 #    If you manually geolocate records, you'll use this to update your final 
@@ -93,7 +91,7 @@
   #   This is the dataset you will go through and manually geolocate; 
   #   instructions for geolocating can be found here:
   #   https://docs.google.com/document/d/1RBUD6-ogLc7PRVkDJSIEKzkgvC6xekj9Q_kl1vzxhCs/edit?usp=share_link
-  ## All_ExSitu_Compiled_Post-Geolocation_YYYY_MM_DD.csv
+  ## FINAL_ExSitu_Compiled_Post-Geolocation_YYYY_MM_DD.csv
   #   Final ex situ dataset, saved to both your ex situ output folder and your
   #   raw in situ input data folder (to use in mapping wild occurrences).
   #   For descriptions of columns in the output, see the "Ex situ data output"
@@ -887,10 +885,10 @@ nrow(no_indiv)
 write.csv(no_indiv, file.path(main_dir, exsitu_dir, standardized_exsitu,
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # save to in situ data folder as well
-if(!dir.exists(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ")))
-  dir.create(file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ"),
+if(!dir.exists(file.path(main_dir,occ_dir,raw_occ,"Ex-situ")))
+  dir.create(file.path(main_dir,occ_dir,raw_occ,"Ex-situ"),
   recursive=T)
-write.csv(no_indiv, file.path(main_dir,occ_dir,"raw_occurrence_data","Ex-situ",
+write.csv(no_indiv, file.path(main_dir,occ_dir,raw_occ,"Ex-situ",
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # remove records with no individuals
 all_data7 <- all_data7[which(all_data7$num_indiv > 0),]
@@ -1042,36 +1040,32 @@ no_coord$latlong_country <- ""
 crdref <- "+proj=longlat +datum=WGS84"
 geo_pts_spatial <- vect(cbind(have_coord$long_dd,have_coord$lat_dd),
   atts=have_coord, crs=crdref)
-  # world countries shapefile should be downloaded from 
-  #    https://hub.arcgis.com/datasets/esri::world-countries-generalized/explore
-  #    and placed in your gis_layers folder
-world_polygons <- vect(file.path(main_dir,gis_dir,
-  "World_Countries_(Generalized)/World_Countries__Generalized_.shp"))
+# read in world countries layer created in 1-prep_gis_layers.R
+world_polygons <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
+                                 "world_countries_10m.shp"))
+# select just the country name column we need
+world_polygons <- world_polygons %>% 
+  select(admin) %>% rename(latlong_country = admin)
 # add country polygon data to each point based on lat-long location
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
 # try switching lat and long for points in Antarctica
 on_land <- as.data.frame(geo_pts); nrow(on_land)
-on_land[which(on_land$COUNTRY == "Antarctica"),c("lat_dd","long_dd")] <-
-  on_land[which(on_land$COUNTRY == "Antarctica"),c("long_dd","lat_dd")]
+on_land[which(on_land$latlong_country == "Antarctica"),c("lat_dd","long_dd")] <-
+  on_land[which(on_land$latlong_country == "Antarctica"),c("long_dd","lat_dd")]
 head(on_land)
 # remove columns from first join and join to countries again
-on_land <- on_land %>% select(-FID,-COUNTRY,-ISO,-COUNTRYAFF,-AFF_ISO,
-                              -SHAPE_Leng,-SHAPE_Area)
+on_land <- on_land %>% select(-latlong_country)
 geo_pts_spatial <- vect(cbind(on_land$long_dd,on_land$lat_dd),
   atts=on_land, crs=crdref)
-geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
-on_land <- geo_pts %>%
-  select(-FID,-ISO,-COUNTRYAFF,-AFF_ISO,-SHAPE_Leng,-SHAPE_Area) %>%
-  rename(latlong_country = COUNTRY)
-on_land <- as.data.frame(on_land)
+on_land <- as.data.frame(terra::intersect(geo_pts_spatial,world_polygons))
 nrow(on_land)
-land_id <- unique(on_land$temp_id)
 # check if points are in water and mark
   # get points that have coords but didn't fall in a country;
   # these are in the water
+land_id <- unique(on_land$temp_id)
 in_water <- have_coord %>% filter(!(temp_id %in% land_id))
 in_water <- as.data.frame(in_water)
-in_water$latlong_flag <- "Given lat-long may be in the water"
+in_water$latlong_flag <- "Given lat-long is in the water"
 in_water$latlong_country <- ""
 nrow(in_water)
 # bind all the points back together
@@ -1204,8 +1198,6 @@ table(all_data9$inst_type)
 
 # check data_source column too
 table(all_data9$data_source)
-# ex_situ_BG_survey  FAO-WIEWS   Genesys
-# 9151               1108        184
 
 ##
 ## H) Combine individuals (same institution and accession number)
@@ -1570,11 +1562,10 @@ exsitu_all <- exsitu_all[,keep_col]
 
 # write final file
 write.csv(exsitu_all, file.path(main_dir, exsitu_dir, standardized_exsitu,
-  paste0("All_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
+  paste0("FINAL_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 # write to in situ folder also
-write.csv(exsitu_all, file.path(main_dir, occ_dir, "raw_occurrence_data", 
-                                "Ex-situ",
+write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex-situ",
   paste0("ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 

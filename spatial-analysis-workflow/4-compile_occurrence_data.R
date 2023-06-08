@@ -19,9 +19,10 @@
   #   6-visualize_occurrence_data.R, and check the standardization of key 
   #   columns including localityDescription, year, basisOfRecord,
   #   establishmentMeans, decimalLatitude, and decimalLongitude. Records without 
-  #   coordinates are separated out and saved, then records with coordinates 
-  #   thinned spatially and saved in taxon-specific CSV files.
-  
+  #   valid coordinates or that fall in the water are separated out and saved, 
+  #   then records with valid coordinates are thinned spatially and saved in 
+  #   taxon-specific CSV files.
+
 ### INPUTS:
   ## target_taxa_with_synonyms.csv
   #   List of target taxa and synonyms; see example in the "Target taxa list"
@@ -31,6 +32,9 @@
   #   Including any/all of: gbif.csv, idigbio.csv, redlist.csv, seinet.csv, 
   #   bien.csv, fia.csv, exsitu.csv, and/or additional files if added manually 
   #   via instructions provided in that script.
+  ## world_countries_10m.shp
+  #   Shapefile created in 1-prep_gis_layers.R script. It's the Natural Earth 
+  #   10m countries layer with the lakes cut out and some ISO_2A issues fixed.
 
 ### OUTPUTS:
   ## all_occurrence_data_raw_YYYY_MM_DD.csv
@@ -63,6 +67,8 @@ rm(my.packages)
 select <- dplyr::select
 filter <- dplyr::filter
 mutate <- dplyr::mutate
+rename <- dplyr::rename
+count <- dplyr::count
 
 ################################################################################
 # Set working directory
@@ -241,19 +247,55 @@ all_data$flag <- NA
 all_data[!coord_test,]$flag <- "Coordinates invalid"
 rm(coord_test)
 
+################################################################################
+# Add lat-long country code column & flag points that are not on land
+################################################################################
+
+# we clip the occurrence points to the countries layer since some analyses rely
+#   on knowing which country (or sometimes state) the point falls within
+
+# read in world countries layer created in 1-prep_gis_layers.R
+world_ctry <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
+                                 "world_countries_10m.shp"))
+# select just the 2-digit country code column we need
+world_ctry <- world_ctry %>% 
+  select(iso_a2) %>% rename(latlong_countryCode = iso_a2)
+
+# add country polygon data to each point based on lat-long location
+  # turn occurrence point data into a spatial object
+have_coord <- all_data %>% filter(!is.na(decimalLatitude) & !is.na(decimalLongitude))
+pts_spatial <- vect(cbind(have_coord$decimalLongitude,have_coord$decimalLatitude),
+                    atts=have_coord, crs="+proj=longlat +datum=WGS84")
+no_coord <- anti_join(all_data,have_coord)
+  # intersect with countries layer
+pts_spatial <- terra::intersect(pts_spatial,world_ctry)
+  # if the following two lines are not zero, you should look at script
+  #  1-prep_gis_layers.R and fill in an additional missing code
+nrow(pts_spatial[which(is.na(pts_spatial$latlong_countryCode)),])
+nrow(pts_spatial[which(pts_spatial$latlong_countryCode=="-99"),])
+  # bring all the data back together and flag water points
+on_land <- as.data.frame(pts_spatial)
+land_id <- unique(on_land$UID)
+in_water <- have_coord %>% filter(!(UID %in% land_id)); nrow(in_water)
+in_water$flag <- "Not on land"
+have_coord <- full_join(on_land,in_water)
+all_data2 <- full_join(have_coord,no_coord)
+rm(have_coord,pts_spatial,no_coord,on_land,land_id,in_water)
+nrow(all_data2)
+
+################################################################################
+# Select records that have valid coordinates and are not in the water
+################################################################################
+
 # write file of raw data before selecting only geolocated records;
 #   this will be used for the GapAnalysis package's summary of occurrences
-write.csv(all_data, file.path(main_dir,occ_dir,standardized_occ,
+write.csv(all_data2, file.path(main_dir,occ_dir,standardized_occ,
                               paste0("all_occurrence_data_raw_", Sys.Date(), 
                                      ".csv")), row.names = F)
 
-################################################################################
-# Select records that have valid coordinates
-################################################################################
-
 # separate out points with locality description but no valid lat-long
-table(all_data$flag)
-locality_pts <- all_data %>% 
+table(all_data2$flag)
+locality_pts <- all_data2 %>% 
   filter(!is.na(localityDescription) & !is.na(flag))
 nrow(locality_pts)
   # save the file, for reference; you can geolocate these records if you want, 
@@ -262,11 +304,13 @@ write.csv(locality_pts, file.path(main_dir,occ_dir,standardized_occ,
   paste0("need_geolocation_", Sys.Date(), ".csv")),
   row.names = F)
 
-# create final subset that is only points with valid lat-long
-geo_pts <- all_data %>% filter(is.na(flag))
+# create final subset that is only points with valid lat-long on land
+geo_pts <- all_data2 %>% filter(is.na(flag))
 nrow(geo_pts)
   # see how many points are from each database
 table(geo_pts$database)
+  #
+sort(unique(geo_pts$latlong_countryCode))
 
 ################################################################################
 # Standardize country code column for checking against lat-long later
@@ -427,6 +471,7 @@ keep_col <- c(
   "localityDescription","locality","verbatimLocality",
   "locationNotes","municipality","higherGeography","county",
   "stateProvince","country","countryCode","countryCode_standard",
+  "latlong_countryCode",
   #additional optional taxa metadata
   "rl_category","ns_rank")
 geo_pts2 <- geo_pts2[,keep_col]

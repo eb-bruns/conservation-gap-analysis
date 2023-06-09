@@ -9,7 +9,7 @@
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
 ### Last Updated: June 2023 ; first written Dec 2020
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
   ## This script gets IUCN Red List and BGCI GlobalTreeSearch native countries 
@@ -37,9 +37,8 @@
 # Load libraries
 ################################################################################
 
-my.packages <- c('tidyverse','countrycode','textclean','data.table')
-# versions I used (in the order listed above): 2.0.0, 1.5.0, 0.9.3, 1.14.8
-
+my.packages <- c('tidyverse','countrycode','textclean')
+  # versions I used (in the order listed above): 2.0.0, 1.5.0, 0.9.3
 #install.packages(my.packages) # turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
   rm(my.packages)
@@ -56,8 +55,7 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 ################################################################################
 
 # read in taxa list
-taxon_list <- read.csv(file.path(main_dir,taxa_dir,
-                                 "target_taxa_with_synonyms.csv"), 
+taxon_list <- read.csv(file.path(main_dir,taxa_dir,"target_taxa_with_synonyms.csv"), 
                        header=T, colClasses="character",na.strings=c("","NA"))
 nrow(taxon_list)
 # see target genus/genera name(s) - you'll use these in a minute
@@ -124,17 +122,17 @@ countries_c <- countries %>%
   arrange(code) %>%
   group_by(taxon,origin) %>%
   mutate(
-    rl_native_dist_iso2c = paste(code, collapse = '; '),
+    rl_native_dist_iso2 = paste(code, collapse = '; '),
     rl_native_dist = paste(name, collapse = '; ')) %>%
   ungroup() %>%
-  select(taxon,origin,rl_native_dist_iso2c,rl_native_dist) %>%
+  select(taxon,origin,rl_native_dist_iso2,rl_native_dist) %>%
   distinct(taxon,origin,.keep_all=T)
 
 # separate native dist countries from introduced dist countries
 rl_native <- countries_c %>% filter(origin == "Native")
 rl_native$rl_taxon_name <- rl_native$taxon
 rl_introduced <- countries_c %>% filter(origin == "Introduced")
-names(rl_introduced)[3] <- "rl_introduced_dist_iso2c"
+names(rl_introduced)[3] <- "rl_introduced_dist_iso2"
 names(rl_introduced)[4] <- "rl_introduced_dist"
 rl_introduced$rl_taxon_name <- rl_introduced$taxon
 # join both native and introduced together
@@ -142,8 +140,8 @@ rl_list <- full_join(rl_native[,c(1,4,3)],rl_introduced[,c(1,4,3,5)])
 
 # create RL dataframe for joining to our taxa list
 rl_add <- rl_list %>%
-  select(taxon,rl_native_dist,rl_native_dist_iso2c,rl_introduced_dist,
-         rl_introduced_dist_iso2c,rl_taxon_name)
+  select(taxon,rl_native_dist,rl_native_dist_iso2,rl_introduced_dist,
+         rl_introduced_dist_iso2,rl_taxon_name)
 # join RL category and country datasets together
 rl_add <- full_join(category,rl_add)
 rl_add$rl_taxon_name <- rl_add$taxon
@@ -181,11 +179,11 @@ taxon_list[which(is.na(taxon_list$rl_category)),]$rl_category <- "Not Evaluated"
 # it manually following this example:
 #add <- taxon_test %>% 
 #  filter(taxon_name == "Quercus prinus") %>%
-#  select(rl_category,rl_native_dist,rl_native_dist_iso2c,
-#         rl_introduced_dist,rl_introduced_dist_iso2c,rl_taxon_name)
+#  select(rl_category,rl_native_dist,rl_native_dist_iso2,
+#         rl_introduced_dist,rl_introduced_dist_iso2,rl_taxon_name)
 #taxon_list[which(taxon_list$taxon_name_accepted == "Quercus montana"),
-#           c("rl_category","rl_native_dist","rl_native_dist_iso2c","
-#             "rl_introduced_dist","rl_introduced_dist_iso2c",
+#           c("rl_category","rl_native_dist","rl_native_dist_iso2","
+#             "rl_introduced_dist","rl_introduced_dist_iso2",
 #             "rl_taxon_name")] <- add
 
 ################################################################################
@@ -198,10 +196,12 @@ taxon_list[which(is.na(taxon_list$rl_category)),]$rl_category <- "Not Evaluated"
 # Click "Search" then scroll to the bottom and click "Download as CSV file"
 # If you have more than one target genus, repeat the above steps for the
 #   other genera
-# Move all download(s) to your "taxa_metadata" folder (in target_taxa folder)
+# Move all download(s) to your "taxa_metadata" folder (in target_taxa folder) 
+#   and create a new folder called "globaltreesearch_data" to hold them all
 
 # read in and compile GTS data
-file_list <- list.files(path = file.path(main_dir,taxa_dir,output_dir),
+file_list <- list.files(path = file.path(main_dir,taxa_dir,output_dir,
+                                         "globaltreesearch_data"),
                         pattern = "globaltreesearch_results", full.names = T)
 file_dfs <- lapply(file_list, read.csv, colClasses = "character",
                    na.strings=c("","NA"),strip.white=T)
@@ -242,15 +242,15 @@ names(country_set)[1] <- "country_name"
 #country_set[which(country_set$country_name == "South Sudan"),]
 
 # add country codes to GTS native distribution data
-gts_list$gts_native_dist_iso2c <- gts_list$native_distribution
-gts_list$gts_native_dist_iso2c <- mgsub(gts_list$gts_native_dist_iso2c,
+gts_list$gts_native_dist_iso2 <- gts_list$native_distribution
+gts_list$gts_native_dist_iso2 <- mgsub(gts_list$gts_native_dist_iso2,
                                         array(as.character(country_set$country_name)),
                                         array(as.character(country_set$iso2c)))
 names(gts_list)[4] <- "gts_native_dist"
 
 # create GTS dataframe for joining to our taxa list
 gts_add <- gts_list %>%
-  select(taxon,gts_native_dist,gts_native_dist_iso2c)
+  select(taxon,gts_native_dist,gts_native_dist_iso2)
 gts_add$gts_taxon_name <- gts_add$taxon
 head(gts_add)
 
@@ -280,9 +280,9 @@ taxon_list <- left_join(taxon_list, gts_add,
 # synonyms, you can do it manually following this example:
 #add <- taxon_test %>% 
 #  filter(taxon_name == "Quercus prinus") %>%
-#  select(gts_native_dist,gts_native_dist_iso2c,gts_taxon_name)
+#  select(gts_native_dist,gts_native_dist_iso2,gts_taxon_name)
 #taxon_list[which(taxon_list$taxon_name_accepted == "Quercus montana"),
-#           c("gts_native_dist","gts_native_dist_iso2c","gts_taxon_name")] <- add
+#           c("gts_native_dist","gts_native_dist_iso2","gts_taxon_name")] <- add
 
 ################################################################################
 # Combine GTS and RL results
@@ -306,7 +306,7 @@ add_manually <- data.frame(
                          "United States","United States",
                          "Mexico; United States",
                          "United States"),
-  manual_native_dist_iso2c = c("US","US",
+  manual_native_dist_iso2 = c("US","US",
                                "US","US",
                                "US","US",
                                "MX; US",
@@ -314,7 +314,7 @@ add_manually <- data.frame(
 taxon_list <- left_join(taxon_list,add_manually)
 # if you don't add anything manually, you'll still need those columns, so add:
 #taxon_list$manual_native_dist <- NA
-#taxon_list$manual_native_dist_iso2c <- NA
+#taxon_list$manual_native_dist_iso2 <- NA
 
 # create columns that combine RL, GTS, and manually-added country data
   # full country names
@@ -326,11 +326,11 @@ taxon_list$all_native_dist <- sapply(strsplit(
 unique(taxon_list$all_native_dist)
   # ISO country code abbreviations
 taxon_list <- taxon_list %>%
-  unite(all_native_dist_iso2c, c(rl_native_dist_iso2c,gts_native_dist_iso2c,manual_native_dist_iso2c),
+  unite(all_native_dist_iso2, c(rl_native_dist_iso2,gts_native_dist_iso2,manual_native_dist_iso2),
         sep="; ", remove=F, na.rm=T)
-taxon_list$all_native_dist_iso2c <- sapply(strsplit(
-  taxon_list$all_native_dist_iso2c, "; "), function(x) paste(unique(x), collapse = "; "))
-unique(taxon_list$all_native_dist_iso2c)
+taxon_list$all_native_dist_iso2 <- sapply(strsplit(
+  taxon_list$all_native_dist_iso2, "; "), function(x) paste(unique(x), collapse = "; "))
+unique(taxon_list$all_native_dist_iso2)
 
 ################################################################################
 # Write new target taxa file with new metadata added
@@ -340,11 +340,11 @@ unique(taxon_list$all_native_dist_iso2c)
 taxon_list <- taxon_list %>%
   select(taxon_name,taxon_name_accepted,taxon_name_status,
          ns_rank, ns_taxon_name, #add any other manually-added columns here 
-         rl_category,all_native_dist,all_native_dist_iso2c,
-         rl_native_dist,rl_native_dist_iso2c,
-            rl_introduced_dist,rl_introduced_dist_iso2c,rl_taxon_name,
-         gts_native_dist,gts_native_dist_iso2c,gts_taxon_name,
-         manual_native_dist,manual_native_dist_iso2c)
+         rl_category,all_native_dist,all_native_dist_iso2,
+         rl_native_dist,rl_native_dist_iso2,
+            rl_introduced_dist,rl_introduced_dist_iso2,rl_taxon_name,
+         gts_native_dist,gts_native_dist_iso2,gts_taxon_name,
+         manual_native_dist,manual_native_dist_iso2)
 
 # replace NA with empty string, to be sure NA is not confused with a country code
 taxon_list[is.na(taxon_list)] <- ""

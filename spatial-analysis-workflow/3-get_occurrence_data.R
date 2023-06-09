@@ -9,7 +9,7 @@
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
 ### Last Updated: June 2023 ; first written Feb 2020
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
   ## This script provides instructions and code chunks for downloading and
@@ -74,11 +74,8 @@
 # Load libraries
 ################################################################################
 
-my.packages <- c('plyr','tidyverse','textclean','data.table', 
-                 'rgbif','ridigbio','BIEN')
-# versions I used (in the order listed above): 1.8.8, 2.0.0, 0.9.3, 1.14.8,
-#                                              3.7.7, 0.3.6, 1.2.6
-
+my.packages <- c('tidyverse','textclean','data.table','rgbif','ridigbio','BIEN')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 1.14.8, 3.7.7, 0.3.6, 1.2.6
 # install.packages(my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
     rm(my.packages)
@@ -101,8 +98,7 @@ data_out <- "input_datasets"
 ################################################################################
 
 # read in taxa list
-taxon_list <- read.csv(file.path(main_dir,taxa_dir,
-                                 "target_taxa_with_synonyms.csv"),
+taxon_list <- read.csv(file.path(main_dir,taxa_dir,"target_taxa_with_synonyms.csv"),
                        header=T, colClasses="character",na.strings=c("","NA"))
 head(taxon_list); nrow(taxon_list)
 
@@ -203,8 +199,7 @@ download_key <- gbif_download
 occ_download_wait(download_key, status_ping=10, quiet=TRUE)
   # get download when its ready then unzip and read in
 occ_download_get(key=download_key[1],
-  path=file.path(main_dir,occ_dir,raw_occ,"GBIF"),
-  overwrite=TRUE)
+  path=file.path(main_dir,occ_dir,raw_occ,"GBIF"))
 unzip(zipfile=paste0(
   file.path(main_dir,occ_dir,raw_occ,"GBIF",download_key[1]),".zip"),
   files="occurrence.txt",
@@ -468,7 +463,7 @@ h <- idigbio_raw %>% filter(taxonRank %in% hybrid)
   h$taxon_name <- paste(h$genus,"x",h$specificEpithet)
 a <- idigbio_raw %>% filter(taxonRank %in% aff)
   a$taxon_name <- paste(a$genus,"aff.",a$specificEpithet)
-idigbio_raw <- Reduce(rbind.fill,list(subsp,var,form,spp,h,a))
+idigbio_raw <- Reduce(bind_rows,list(subsp,var,form,spp,h,a))
 # combine a few similar columns
 idigbio_raw <- idigbio_raw %>% unite("taxonIdentificationNotes",
     c(identificationID:identifiedBy,taxonRemarks),na.rm=T,remove=T,sep=" | ")
@@ -756,7 +751,7 @@ form$taxon_name <- paste(form$genus,form$specificEpithet,"f.",
 spp <- seinet_raw %>% filter(is.na(taxonRank) | taxonRank == "Species" |
   taxonRank == "Subform")
   spp$taxon_name <- paste(spp$genus,spp$specificEpithet)
-seinet_raw <- Reduce(rbind.fill,list(subsp,var,form,spp))
+seinet_raw <- Reduce(bind_rows,list(subsp,var,form,spp))
 seinet_raw$taxon_name[which(is.na(seinet_raw$taxon_name))] <-
   seinet_raw$scientificName[which(is.na(seinet_raw$taxon_name))]
   # check out taxon names:
@@ -893,6 +888,7 @@ write.csv(bien_citation, file.path(main_dir,occ_dir,raw_occ,"BIEN",
 
 # for some reason there are two date_collected columns... 
   # check that columns 25 and 35 are "date_collected"; if so, remove the 2nd one:
+colnames(bien_raw)
 bien_raw <- bien_raw[,c(1:34,36:42)]
 
 # OPTIONAL: remove rows from GBIF and/or FIA if you are separately downloading
@@ -1005,7 +1001,7 @@ var <- sp_codes %>% filter(VARIETY != "")
 var$taxon_name <- paste(var$GENUS,var$SPECIES,"var.",var$VARIETY)
 spp <- sp_codes %>% filter(SUBSPECIES == "" & VARIETY == "")
 spp$taxon_name <- paste(spp$GENUS,spp$SPECIES)
-sp_codes <- Reduce(rbind.fill,list(subsp,var,spp))
+sp_codes <- Reduce(bind_rows,list(subsp,var,spp))
 sp_codes <- sp_codes %>% select(SPCD,taxon_name)
   # get FIA species that are in our target taxa list
 taxon_fia <- sp_codes[which(sp_codes$taxon_name %in% taxon_names),]
@@ -1047,20 +1043,17 @@ state_abb <- c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID",
 # Once you've done this for every state, pat yourself on the back and
 #   move them to a folder called "FIA_TREE" and move it into your FIA_data folder
 
-# If you have access to the Morton GTCP Shared drive, use this working directory
-# (change based on your computer)...
+# Set the working directory for the location of your FIA_data folder (change for you)
 fia_dir <- "/Users/emily/Library/CloudStorage/GoogleDrive-ebeckman@mortonarb.org/Shared drives/Global Tree Conservation Program/4. GTCP_Projects/Gap Analyses/FIA_data_Nov2022"
-# If you downloaded manually, set the working directory for the location of
-# the folder where you placed all the downloaded files (change to yours)...
-#fia_dir <- "./Desktop/work/FIA_data"
 
 # read in metadata tables and select relevant columns
   # plot data (has lat-long information)
-fia_plots <- read.csv(file.path(fia_dir,"CSV_FIADB_ENTIRE/ENTIRE_PLOT.csv"))
+fia_plots <- read.csv(file.path(fia_dir,"CSV_FIADB_ENTIRE/ENTIRE_PLOT.csv"),
+                      header = T, na.strings=c("","NA"), colClasses="character")
 fia_plots <- fia_plots %>% select(INVYR,STATECD,UNITCD,COUNTYCD,PLOT,LAT,LON)
   # state and county codes and names
 county_codes <- read.csv(file.path(fia_dir,"CSV_FIADB_ENTIRE/ENTIRE_COUNTY.csv"),
-  header = T, na.strings=c("","NA"), colClasses="character")
+                         header = T, na.strings=c("","NA"), colClasses="character")
 county_codes <- county_codes %>% select(STATECD,COUNTYCD,COUNTYNM)
 
 # function to extract target species data from each state CSV,
@@ -1071,7 +1064,8 @@ extract_tree_data_local <- function(state_abb){
   # this takes longer for larger states
   cat("Reading in data for",state_abb)
   state_df <- read.csv(file.path(fia_dir,"FIA_TREE",
-    paste0(state_abb,"_TREE.csv")))
+    paste0(state_abb,"_TREE.csv")), colClasses="character")
+  state_df$SPCD <- as.numeric(state_df$SPCD)
   # cycle through list of target taxon codes and extract those rows from
   # the state CSV
   for (sp in 1:length(species_codes)){
@@ -1098,9 +1092,9 @@ for(file in seq_along(fia_outputs)){
   fia_raw <- rbind(fia_raw, fia_outputs[[file]])
 }; nrow(fia_raw)
 # join FIA data to supplemental tables
-fia_raw <- join(fia_raw,sp_codes)
-fia_raw <- join(fia_raw,fia_plots)
-fia_raw <- join(fia_raw,county_codes)
+fia_raw <- left_join(fia_raw,sp_codes)
+fia_raw <- left_join(fia_raw,fia_plots)
+fia_raw <- left_join(fia_raw,county_codes)
 # write file of raw data
 write.csv(fia_raw,file.path(main_dir,occ_dir,raw_occ,"FIA",
   "fia_extracted_local.csv"),row.names=FALSE)
@@ -1156,8 +1150,8 @@ extract_tree_data_web <- function(state_abb){
     state_abb,"_COUNTY.csv")))
   county_codes <- county_codes %>% select(STATECD,COUNTYCD,COUNTYNM)
   # join FIA data to supplemental tables
-  data_sm <- join(data_sm,fia_plots)
-  data_sm <- join(data_sm,county_codes)
+  data_sm <- left_join(data_sm,fia_plots)
+  data_sm <- left_join(data_sm,county_codes)
   # return results
   return(data_sm)
   rm(sp)
@@ -1172,7 +1166,7 @@ for(file in seq_along(fia_outputs)){
   fia_raw <- rbind(fia_raw, fia_outputs[[file]])
 }; nrow(fia_raw)
 # join FIA data to species codes
-fia_raw <- join(fia_raw,sp_codes)
+fia_raw <- left_join(fia_raw,sp_codes)
 # write file of raw data
 write.csv(fia_raw,file.path(main_dir,occ_dir,raw_occ,"FIA",
   "fia_extracted_web.csv"),row.names=FALSE)
@@ -1237,14 +1231,14 @@ rm(fia_raw)
 ###
 
 # read in ex situ data we saved in 2-compile_exsitu_data.R (edit to match your 
-#   file name)
-exsitu_raw1 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex-situ",
-  "ExSitu_Compiled_Post-Geolocation_2023-06-01.csv"), colClasses = "character",
+#   file names)
+exsitu_raw1 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
+  "ExSitu_Compiled_Post-Geolocation_2023-06-08.csv"), colClasses = "character",
     na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
-exsitu_raw2 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex-situ",
-  "ExSitu_Dead_2023-06-01.csv"), colClasses = "character",
+exsitu_raw2 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
+  "ExSitu_Dead_2023-06-08.csv"), colClasses = "character",
   na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
-exsitu_raw <- rbind.fill(exsitu_raw1,exsitu_raw2)
+exsitu_raw <- bind_rows(exsitu_raw1,exsitu_raw2)
 nrow(exsitu_raw)
 rm(exsitu_raw1,exsitu_raw2)
 # rename columns to fit standard

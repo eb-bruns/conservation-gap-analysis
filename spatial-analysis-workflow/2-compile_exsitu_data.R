@@ -9,7 +9,7 @@
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
 ### Last Updated: June 2023 ; first written Dec 2019
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
   ## This script takes a folder of CSV files representing accessions data from
@@ -101,15 +101,17 @@
 # Load libraries
 ################################################################################
 
-my.packages <- c('plyr','tidyverse','textclean','CoordinateCleaner',
-                 'data.table','terra','tidyterra')
-# versions I used (in the order listed above): 1.8.8, 2.0.0, 0.9.3, 2.0-20,
-#                                              1.14.8, 1.7-29, 0.4.0
+# install measurements package if you don't have it yet
+install.packages('measurements')
 
-# install.packages (my.packages) #Turn on to install current versions
+# load packages
+my.packages <- c('tidyverse','textclean','CoordinateCleaner','terra')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 2.0-20, 1.7-29
+# install.packages(my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
 
+# be sure we're using dplyr when we want to
 select <- dplyr::select
 rename <- dplyr::rename
 filter <- dplyr::filter
@@ -171,10 +173,10 @@ read.exsitu.csv <- function(path,submission_year){
     file_dfs[[file]] <- df
     #print(head(file_dfs[[file]],n=2))
   }
-  # stack all datasets using rbind.fill, which keeps non-matching columns
+  # stack all datasets using bind_rows, which keeps non-matching columns
   # and fills with NA; 'Reduce' iterates through and merges with previous;
   # this may take a few minutes if you have lots of data
-  all_data <- Reduce(rbind.fill, file_dfs)
+  all_data <- Reduce(bind_rows, file_dfs)
     print(paste0("Number of rows: ",nrow(all_data)))
     print(paste0("Number of columns: ",ncol(all_data)))
   return(all_data)
@@ -193,7 +195,7 @@ all_data <- read.exsitu.csv(file.path(main_dir, exsitu_dir, raw_exsitu,
                                       "exsitu_standard_column_names"), "2022")
 # stack all data if you had multiple years:
 #to_stack <- list(raw_2022,raw_2021,raw_2020,raw_2019,raw_2018,raw_2017)
-#all_data <- Reduce(rbind.fill, to_stack)
+#all_data <- Reduce(bind_rows, to_stack)
 
 # look at columns
 sort(colnames(all_data))
@@ -412,7 +414,9 @@ genesys_sel <- genesys %>%
 genesys_sel$data_source <- "Genesys"
 
 # join to exsitu data
-all_data <- rbind.fill(all_data,genesys_sel)
+  # make all col character type first to join successfully
+  genesys_sel <- genesys_sel %>% mutate(across(everything(), as.character))
+all_data <- bind_rows(all_data,genesys_sel)
 nrow(all_data)
 
 ### IF YOU HAVE DATA FROM THE USDA ARS NATIONAL PLANT GERMPLASM SYSTEM (GRIN)...
@@ -480,7 +484,9 @@ nrow(wiews_sel)
 wiews_sel$data_source <- "FAO-WIEWS"
 
 # join to exsitu data
-all_data <- rbind.fill(all_data,wiews_sel)
+  # make all col character type first to join successfully
+  wiews_sel <- wiews_sel %>% mutate(across(everything(), as.character))
+all_data <- bind_rows(all_data,wiews_sel)
 nrow(all_data)
 
 ################################################################################
@@ -495,8 +501,7 @@ nrow(all_data)
 all_data2 <- all_data
 
 # read in target taxa list
-taxon_list <- read.csv(file.path(main_dir, taxa_dir,
-                                 "target_taxa_with_synonyms.csv"),
+taxon_list <- read.csv(file.path(main_dir, taxa_dir,"target_taxa_with_synonyms.csv"),
                        header=T, colClasses="character",na.strings=c("","NA"))
 str(taxon_list)
 
@@ -885,10 +890,10 @@ nrow(no_indiv)
 write.csv(no_indiv, file.path(main_dir, exsitu_dir, standardized_exsitu,
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # save to in situ data folder as well
-if(!dir.exists(file.path(main_dir,occ_dir,raw_occ,"Ex-situ")))
-  dir.create(file.path(main_dir,occ_dir,raw_occ,"Ex-situ"),
+if(!dir.exists(file.path(main_dir,occ_dir,raw_occ,"Ex_situ")))
+  dir.create(file.path(main_dir,occ_dir,raw_occ,"Ex_situ"),
   recursive=T)
-write.csv(no_indiv, file.path(main_dir,occ_dir,raw_occ,"Ex-situ",
+write.csv(no_indiv, file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
   paste0("ExSitu_Dead_", Sys.Date(), ".csv")),row.names = F)
   # remove records with no individuals
 all_data7 <- all_data7[which(all_data7$num_indiv > 0),]
@@ -960,47 +965,41 @@ sort(unique(all_data8$long_dd))
 #   [d, m, and s must be in the same cell, with 1 space between each value]
 #   format = ## ## ## (DMS) OR ## ##.### (DM)
   # mark rows that need to be converted
-convert <- all_data8[which(grepl(" ",all_data8$lat_dd) |
-  grepl(" ",all_data8$long_dd)),]
+convert <- all_data8 %>% filter(grepl(" ",lat_dd) | grepl(" ",long_dd))
   nrow(convert)
-unique(convert$lat_dd)
-good <- anti_join(all_data8, convert)
+no_convert <- anti_join(all_data8, convert)
   # separate by dec_min_sec and deg_dec_min then convert to decimal degrees
     # latitude
+unique(convert$lat_dd)
 dms <- convert[which(str_count(convert$lat_dd," ") == 2),]; nrow(dms)
 ddm <- convert[which(str_count(convert$lat_dd," ") == 1),]; nrow(ddm)
 other <- convert[which((str_count(convert$lat_dd," ") != 1 &
   str_count(convert$lat_dd," ") != 2) | is.na(str_count(convert$lat_dd," "))),]
   nrow(other)
-dms$lat_dd = measurements::conv_unit(dms$lat_dd, from = 'deg_min_sec',
-  to = 'dec_deg')
-ddm$lat_dd = measurements::conv_unit(ddm$lat_dd, from = 'deg_dec_min',
-  to = 'dec_deg')
+dms$lat_dd = measurements::conv_unit(dms$lat_dd, from = 'deg_min_sec', to = 'dec_deg')
+ddm$lat_dd = measurements::conv_unit(ddm$lat_dd, from = 'deg_dec_min', to = 'dec_deg')
 convert <- rbind(dms,ddm,other); nrow(convert)
     # longitude
+unique(convert$long_dd)
 dms <- convert[which(str_count(convert$long_dd," ") == 2),]; nrow(dms)
 ddm <- convert[which(str_count(convert$long_dd," ") == 1),]; nrow(ddm)
 other <- convert[which((str_count(convert$long_dd," ") != 1 &
   str_count(convert$long_dd," ") != 2) | is.na(str_count(convert$long_dd," "))),]
   nrow(other)
-  dms$long_dd = measurements::conv_unit(dms$long_dd, from = 'deg_min_sec',
-    to = 'dec_deg')
-  ddm$long_dd = measurements::conv_unit(ddm$long_dd, from = 'deg_dec_min',
-    to = 'dec_deg')
-  convert <- rbind(dms,ddm,other); nrow(convert)
+dms$long_dd = measurements::conv_unit(dms$long_dd, from = 'deg_min_sec', to = 'dec_deg')
+ddm$long_dd = measurements::conv_unit(ddm$long_dd, from = 'deg_dec_min', to = 'dec_deg')
+convert <- rbind(dms,ddm,other); nrow(convert)
   # join everything back together
-all_data8 <- rbind(good,convert); nrow(all_data8)
+all_data8 <- rbind(no_convert,convert); nrow(all_data8)
 
 # check validity of lat and long
 all_data8$lat_dd <- as.numeric(all_data8$lat_dd)
-  #sort(unique(all_data8$lat_dd))
 all_data8$long_dd <- as.numeric(all_data8$long_dd)
-  #sort(unique(all_data8$long_dd))
   # if coords are both 0, set to NA
 zero <- which(all_data8$lat_dd == 0 & all_data8$long_dd == 0)
 all_data8$lat_dd[zero] <- NA; all_data8$long_dd[zero] <- NA
-  # flag non-numeric and not available coordinates and lat > 90, lat < -90,
-  # lon > 180, and lon < -180
+  # flag non-numeric, not available, and invalid (lat > 90 | lat < -90 |
+  #   lon > 180 | lon < -180) coordinates 
 coord_test <- cc_val(all_data8, lon = "long_dd",lat = "lat_dd",
   value = "flagged", verbose = TRUE)
   # try switching lat and long for invalid points and check validity again
@@ -1009,22 +1008,24 @@ all_data8[!coord_test,c("lat_dd","long_dd")] <-
 coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
   value = "flagged",verbose = TRUE)
 
-# check longitude values that are positive, since
-#   sometimes the negative gets left off
-pos_long <- all_data8[which(all_data8$long_dd > 0),]
 # IF the taxon is native to N/S America, make longitude value negative (you need
 #   a taxon_region column for this!)...
 #unique(all_data8$taxon_region)
-#setDT(all_data8)[long_dd > 0 & taxon_region != "Europe" &
-#                 taxon_region != "Asia" & taxon_region != "Asia & Europe",
-#                 long_dd := as.numeric(paste0("-",as.character(long_dd)))]
-# OR, IF ALL YOUR TARGET TAXA ARE NATIVE TO THE AMERICAS:
-setDT(all_data8)[long_dd > 0,
-                 long_dd := as.numeric(paste0("-",as.character(long_dd)))]
-
+#all_data8 <- all_data8 %>% 
+#  mutate(long_dd = if_else(long_dd > 0 & 
+#                             # edit these regions to match yours in the Americas:
+#                             (taxon_region == "North America" | 
+#                              taxon_region == "Central America" |
+#                              taxon_region == "South America"),
+#                           as.numeric(paste0("-",as.character(long_dd))), long_dd))
+# OR, IF ALL YOUR TARGET TAXA ARE NATIVE TO THE AMERICAS, make all longitudes negative:
+#   note that 'NAs introduced by coercion' warning message is ok
+all_data8 <- all_data8 %>% 
+  mutate(long_dd = if_else(long_dd > 0, as.numeric(paste0("-",as.character(long_dd))), long_dd))
+         
 # make coords NA if they are still flagged
-coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
-  value = "flagged",verbose = TRUE)
+coord_test <- cc_val(all_data8, lon = "long_dd", lat = "lat_dd",
+  value = "flagged", verbose = TRUE)
 all_data8[!coord_test,"lat_dd"] <- NA
 all_data8[!coord_test,"long_dd"] <- NA
 nrow(all_data8)
@@ -1037,27 +1038,26 @@ no_coord <- anti_join(all_data8,have_coord)
 no_coord$latlong_country <- ""
 # add country-level information to fix potentially-switched lat/longs
   # turn occurrence point data into a spatial object
-crdref <- "+proj=longlat +datum=WGS84"
-geo_pts_spatial <- vect(cbind(have_coord$long_dd,have_coord$lat_dd),
-  atts=have_coord, crs=crdref)
+geo_pts_spatial <- vect(cbind(have_coord$long_dd, have_coord$lat_dd),
+  atts=have_coord, crs="+proj=longlat +datum=WGS84")
 # read in world countries layer created in 1-prep_gis_layers.R
 world_polygons <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
                                  "world_countries_10m.shp"))
 # select just the country name column we need
-world_polygons <- world_polygons %>% 
-  select(admin) %>% rename(latlong_country = admin)
+world_polygons <- world_polygons[,"admin"]
 # add country polygon data to each point based on lat-long location
 geo_pts <- terra::intersect(geo_pts_spatial,world_polygons)
 # try switching lat and long for points in Antarctica
 on_land <- as.data.frame(geo_pts); nrow(on_land)
-on_land[which(on_land$latlong_country == "Antarctica"),c("lat_dd","long_dd")] <-
-  on_land[which(on_land$latlong_country == "Antarctica"),c("long_dd","lat_dd")]
+on_land[which(on_land$admin == "Antarctica"),c("lat_dd","long_dd")] <-
+  on_land[which(on_land$admin == "Antarctica"),c("long_dd","lat_dd")]
 head(on_land)
 # remove columns from first join and join to countries again
-on_land <- on_land %>% select(-latlong_country)
+on_land <- on_land %>% select(-admin)
 geo_pts_spatial <- vect(cbind(on_land$long_dd,on_land$lat_dd),
-  atts=on_land, crs=crdref)
+  atts=on_land, crs="+proj=longlat +datum=WGS84")
 on_land <- as.data.frame(terra::intersect(geo_pts_spatial,world_polygons))
+on_land <- on_land %>% rename(latlong_country = admin)
 nrow(on_land)
 # check if points are in water and mark
   # get points that have coords but didn't fall in a country;
@@ -1091,13 +1091,13 @@ table(all_data9$latlong_flag)
 # add latlong_det (latlong determination) column
 all_data9$latlong_det[which(all_data9$prov_type == "H")] <- "N/A (horticultural)"
 all_data9$latlong_det[which(!is.na(all_data9$lat_dd) &
-  !is.na(all_data9$long_dd))] <- "Given"
+  !is.na(all_data9$long_dd))] <- "Given in original record"
 all_data9$latlong_det[which(all_data9$latlong_det == "")] <- NA
 table(all_data9$latlong_det)
 
 # where prov_type is "N/A (horticultural)" but lat-long is given, change to "H?"
   # create new prov type column
-all_data9$prov_type[which(all_data9$latlong_det == "Given" &
+all_data9$prov_type[which(all_data9$latlong_det == "Given in original record" &
   all_data9$prov_type == "H")] <- "H?"
 table(all_data9$prov_type)
 
@@ -1370,7 +1370,8 @@ nrow(all_data9)
 ##   above)
 data_sel <- all_data9[,keep_col]
 
-# write file
+# write file; if you don't want to geolocate or check flagged records, this
+#   will be your final dataset
 write.csv(data_sel, file.path(main_dir, exsitu_dir,standardized_exsitu,
   paste0("All_ExSitu_Compiled_", Sys.Date(), ".csv")),row.names = F)
 
@@ -1491,12 +1492,12 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
 
 # read in all compiled ex situ data (exported above)
 exsitu <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "All_ExSitu_Compiled_2023-06-01.csv"), #change this to your version!
+  "All_ExSitu_Compiled_2023-06-08.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset
 geo_raw <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "ExSitu_Need_Geolocation_2023-06-01_Geolocated.csv"), #change this to your version!
+  "ExSitu_Need_Geolocation_2023-06-08_Geolocated.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 head(geo_raw)
   # check this is just NA, meaning no "priority" records are not geolocated
@@ -1526,7 +1527,7 @@ exsitu_geo <- full_join(exsitu_geo,geolocated)
 exsitu_no_geo <- exsitu %>%
   filter(!(UID %in% exsitu_geo$UID))
 nrow(exsitu_no_geo)
-exsitu_all <- rbind.fill(exsitu_no_geo,exsitu_geo)
+exsitu_all <- bind_rows(exsitu_no_geo,exsitu_geo)
 nrow(exsitu_all)
 table(exsitu_all$latlong_det)
 
@@ -1565,7 +1566,7 @@ write.csv(exsitu_all, file.path(main_dir, exsitu_dir, standardized_exsitu,
   paste0("FINAL_ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 # write to in situ folder also
-write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex-situ",
+write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex_situ",
   paste0("ExSitu_Compiled_Post-Geolocation_", Sys.Date(), ".csv")), 
   row.names = F)
 
@@ -1579,7 +1580,7 @@ write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex-situ",
 
 
 
-### THIS SECTION IS OLD AND HAS NOT BEEN UPDATED !!!
+### THIS SECTION IS OLD AND HAS NOT BEEN UPDATED SINCE ~2021 !!!
 ### it goes between step 8 and 9 above, if using
 
 ################################################################################
@@ -1587,7 +1588,7 @@ write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex-situ",
 ################################################################################
 
 # read in data in again, if you didn't just run the whole script
-#need_geo <- read.csv(file.path(main_dir,"ex-situ_data","OUTPUTS_FROM_R",
+#need_geo <- read.csv(file.path(main_dir,"Ex-situ_data","OUTPUTS_FROM_R",
 #  "ExSitu_Need_Geolocation_2022-10-14.csv"), header = T, colClasses="character")
 
 # add GEOLocate standard columns
@@ -1630,10 +1631,10 @@ sp_split <- split(geolocate, as.factor(geolocate$taxon_name_acc))
 names(sp_split) <- gsub(" ","_",names(sp_split))
 
 # write files
-if(!dir.exists(file.path(main_dir,"ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate")))
-  dir.create(file.path(main_dir,"ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate"),recursive=T)
+if(!dir.exists(file.path(main_dir,"Ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate")))
+  dir.create(file.path(main_dir,"Ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate"),recursive=T)
 lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
-  file.path(main_dir,"ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate",
+  file.path(main_dir,"Ex-situ_data","OUTPUTS_FROM_R","files_for_GEOLocate",
   paste0(names(sp_split)[[i]],".csv")),row.names = F))
 
 

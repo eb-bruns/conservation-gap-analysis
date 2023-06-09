@@ -1,15 +1,15 @@
 ### 4-compile_occurrence_data.R
-### Author: Emily Beckman Bruns
+### Authors: Emily Beckman Bruns & Shannon M Still
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
-#   Missouri Botanical Garden
+#   Missouri Botanical Garden, UC Davis Arboretum & Botanic Garden
 ### Funding: Base script funded by the Institute of Museum and Library 
 #   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
 #   Moderate edits were added with funding from a cooperative agreement
 #   between the United States Botanic Garden and San Diego Botanic Garden
 #   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
 ### Last Updated: June 2023 ; first written Feb 2020
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
   ## This script compiles in situ occurrence point data that was downloaded in
@@ -44,10 +44,10 @@
   #   All occurrence records without valid lat-long but with locality 
   #   description; these could be manually geolocated if desired, but usually
   #   that is only needed if you have a rare species without enough records
-  ## occurrence_record_summary_YYYY_MM_DD.csv
+  ## summary_of_occurrences_YYYY_MM_DD.csv
   #   Summary table with one row for each target taxon, listing the number of 
   #   records with valid lat-long and number with locality description only
-  ## "taxon_raw_points" folder
+  ## "taxon_points_raw" folder
   #   For each taxon in your target taxa list, a CSV of occurrence records with 
   #   valid lat-long coordinates (e.g., Asimina_triloba.csv)
   
@@ -55,11 +55,8 @@
 # Load libraries
 ################################################################################
 
-my.packages <- c('tidyverse','textclean','data.table','CoordinateCleaner',
-                 'terra','tidyterra','raster','countrycode')
-# versions I used (in the order listed above): 2.0.0, 0.9.3, 1.14.8, 2.0-20,
-#                                              1.7-29, 0.4.0, 3.6-13, 1.5.0
-
+my.packages <- c('tidyverse','textclean','CoordinateCleaner','terra','countrycode')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 2.0-20, 1.7-29, 1.5.0
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -77,17 +74,21 @@ count <- dplyr::count
 # use 0-set_working_directory.R script:
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
+# create folder for output data
+data_out <- "taxon_points_raw"
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
+  dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
+             recursive=T)
+
+# assign folder where you have input data (saved in 3-get_occurrence_data.R)
+data_in <- "input_datasets"
+
 ################################################################################
 # Read in and compile occurrence point data
 ################################################################################
 
-# create folder for output data
-if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points")))
-   dir.create(file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points"), 
-             recursive=T)
-
-# read in raw occurrence data
-file_list <- list.files(file.path(main_dir,occ_dir,standardized_occ,"input_datasets"), 
+# read in raw occurrence data from 3-get_occurrence_data.R
+file_list <- list.files(file.path(main_dir,occ_dir,standardized_occ,data_in), 
                         pattern = ".csv", full.names = T)
 file_dfs <- lapply(file_list, read.csv, header = T, na.strings = c("","NA"),
                    colClasses = "character")
@@ -106,8 +107,7 @@ table(all_data$database)
 ################################################################################
 
 # read in target taxa list
-taxon_list <- read.csv(file.path(main_dir, taxa_dir,
-                                 "target_taxa_with_synonyms.csv"),
+taxon_list <- read.csv(file.path(main_dir, taxa_dir,"target_taxa_with_synonyms.csv"),
                        header=T, colClasses="character",na.strings=c("","NA"))
 target_taxa <- unique(taxon_list$taxon_name)
 # if needed, add columns that separate out taxon name
@@ -258,8 +258,7 @@ rm(coord_test)
 world_ctry <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
                                  "world_countries_10m.shp"))
 # select just the 2-digit country code column we need
-world_ctry <- world_ctry %>% 
-  select(iso_a2) %>% rename(latlong_countryCode = iso_a2)
+world_ctry <- world_ctry[,"iso_a2"]
 
 # add country polygon data to each point based on lat-long location
   # turn occurrence point data into a spatial object
@@ -268,13 +267,16 @@ pts_spatial <- vect(cbind(have_coord$decimalLongitude,have_coord$decimalLatitude
                     atts=have_coord, crs="+proj=longlat +datum=WGS84")
 no_coord <- anti_join(all_data,have_coord)
   # intersect with countries layer
+  # if this takes too long, you may need to download the 50m layer in script 
+  #   1-prep_gis_layers.R instead of the 10m layer
 pts_spatial <- terra::intersect(pts_spatial,world_ctry)
   # if the following two lines are not zero, you should look at script
   #  1-prep_gis_layers.R and fill in an additional missing code
-nrow(pts_spatial[which(is.na(pts_spatial$latlong_countryCode)),])
-nrow(pts_spatial[which(pts_spatial$latlong_countryCode=="-99"),])
+nrow(pts_spatial[which(is.na(pts_spatial$iso_a2)),])
+nrow(pts_spatial[which(pts_spatial$iso_a2=="-99"),])
   # bring all the data back together and flag water points
 on_land <- as.data.frame(pts_spatial)
+on_land <- on_land %>% rename(latlong_countryCode = iso_a2)
 land_id <- unique(on_land$UID)
 in_water <- have_coord %>% filter(!(UID %in% land_id)); nrow(in_water)
 in_water$flag <- "Not on land"
@@ -309,8 +311,6 @@ geo_pts <- all_data2 %>% filter(is.na(flag))
 nrow(geo_pts)
   # see how many points are from each database
 table(geo_pts$database)
-  #
-sort(unique(geo_pts$latlong_countryCode))
 
 ################################################################################
 # Standardize country code column for checking against lat-long later
@@ -457,6 +457,7 @@ keep_col <- c(
   "taxon_name_accepted","taxon_name_status",
   "taxon_name","scientificName","genus","specificEpithet",
   "taxonRank","infraspecificEpithet","taxonIdentificationNotes",
+  "all_native_dist_iso2",
   #event
   "year","basisOfRecord",
   #record-level
@@ -498,12 +499,14 @@ names(count_geo)[2] <- "num_latlong_records"
 count_locality <- locality_pts %>% count(taxon_name_accepted)
 names(count_locality)[2] <- "num_locality_records"
   # make table
-files <- list(count_geo,count_locality)
-summary <- setorder(Reduce(full_join, files),num_latlong_records,na.last=F)
-summary
+files <- list(count_geo,count_locality,
+              data.frame(taxon_name_accepted=unique(taxon_list$taxon_name_accepted)))
+summary <- Reduce(full_join, files)
+summary <- summary %>% arrange(!is.na(num_latlong_records), num_latlong_records)
+head(as.data.frame(summary))
   # write file
 write.csv(summary, file.path(main_dir,occ_dir,standardized_occ,
-  paste0("occurrence_record_summary_", Sys.Date(), ".csv")),row.names = F)
+  paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)
 
 ################################################################################
 # Split by species to save
@@ -516,5 +519,5 @@ names(sp_split) <- gsub("\\.","",names(sp_split))
 
 # write files
 lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
-  file.path(main_dir,occ_dir,standardized_occ,"taxon_raw_points",
+  file.path(main_dir,occ_dir,standardized_occ,data_out,
   paste0(names(sp_split)[[i]],".csv")),row.names = F))

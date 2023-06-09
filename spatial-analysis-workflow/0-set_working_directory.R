@@ -5,14 +5,14 @@
 ### Funding: Institute of Museum and Library Services
 #   (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written Dec 2020
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
   ## This script sets the working environment for the computer on which you are
   # working. You can add your own computer and working directories by filling in 
   # the blanks (________) below! The first entry is an example for my computer.
   ## This script also creates the initial folder structure used for the
-  # scripts in the spatial-analysis-workflow
+  # scripts in the spatial-analysis-workflow.
 
 ################################################################################
 # Set working environment depending on your computer
@@ -64,39 +64,38 @@ if (Sys.info()[4] == "Africa.local") {
 # assign the main folders you'll reference in multiple scripts, and create
 #   them if they're not already present
 
+# place your target_taxa_with_synonyms.csv file in this folder
 taxa_dir <- "target_taxa"
 if(!dir.exists(file.path(main_dir, taxa_dir)))
   dir.create(file.path(main_dir, taxa_dir), recursive=T)
-# now place your target_taxa_with_synonyms.csv file in this folder
 
+# you will add layers to this folder in 1-prep_gis_layers.R
 gis_dir <- "gis_layers"
 if(!dir.exists(file.path(main_dir, gis_dir)))
   dir.create(file.path(main_dir, gis_dir), recursive=T)
-# you will add layers to this folder based on instructions provided in different 
-#   scripts in the spatial-analysis-workflow sequence
 
+# you will add folders and files here when you gather and process ex situ data
 exsitu_dir <- "exsitu_data"
 if(!dir.exists(file.path(main_dir, exsitu_dir)))
   dir.create(file.path(main_dir, exsitu_dir), recursive=T)
 raw_exsitu <- "raw_exsitu_data"
-if(!dir.exists(file.path(main_dir, exsitu_dir, "raw_exsitu_data")))
-  dir.create(file.path(main_dir, exsitu_dir, "raw_exsitu_data"), recursive=T)
+if(!dir.exists(file.path(main_dir, exsitu_dir, raw_exsitu)))
+  dir.create(file.path(main_dir, exsitu_dir, raw_exsitu), recursive=T)
 standardized_exsitu <- "standardized_exsitu_data"
-if(!dir.exists(file.path(main_dir, exsitu_dir, "standardized_exsitu_data")))
-  dir.create(file.path(main_dir, exsitu_dir, "standardized_exsitu_data"), recursive=T)
-# you will add folders and files here when you gather and process ex situ data
+if(!dir.exists(file.path(main_dir, exsitu_dir, standardized_exsitu)))
+  dir.create(file.path(main_dir, exsitu_dir, standardized_exsitu), recursive=T)
 
+# you will add folders and files here as you get, compile, refine, and visualize
+#   occurrence data throughout the spatial-analysis-workflow sequence
 occ_dir <- "occurrence_data"
 if(!dir.exists(file.path(main_dir, occ_dir)))
   dir.create(file.path(main_dir, occ_dir), recursive=T)
-raw_occ <- "raw_occurrence_data"
-if(!dir.exists(file.path(main_dir, occ_dir, "raw_occurrence_downloads")))
-  dir.create(file.path(main_dir, occ_dir, "raw_occurrence_downloads"), recursive=T)
+raw_occ <- "raw_occurrence_downloads"
+if(!dir.exists(file.path(main_dir, occ_dir, raw_occ)))
+  dir.create(file.path(main_dir, occ_dir, raw_occ), recursive=T)
 standardized_occ <- "standardized_occurrence_data"
-if(!dir.exists(file.path(main_dir, occ_dir, "standardized_occurrence_data")))
-  dir.create(file.path(main_dir, occ_dir, "standardized_occurrence_data"), recursive=T)
-# you will add folders and files here as you get, compile, refine, and visualize
-#   occurrence data throughout the spatial-analysis-workflow sequence
+if(!dir.exists(file.path(main_dir, occ_dir, standardized_occ)))
+  dir.create(file.path(main_dir, occ_dir, standardized_occ), recursive=T)
 
 
 

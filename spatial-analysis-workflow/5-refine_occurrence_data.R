@@ -1,102 +1,93 @@
-################################################################################
-
-## 5-refine_occurrence_data.R
-
+### 5-refine_occurrence_data.R
 ### Authors: Emily Beckman Bruns & Shannon M Still
-### Funding: Base script was funded by the Institute of Museum and Library 
-# Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-# Moderate edits were added with funding from a cooperative agreement
-# between the United States Botanic Garden and San Diego Botanic Garden
-# (subcontracted to The Morton Arboretum), with support from
-# Botanic Gardens Conservation International U.S.
-
-### Last updated: 09 December 2022
-### R version 4.2.2
+### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
+#   International-US, United States Botanic Garden, San Diego Botanic Garden,
+#   Missouri Botanical Garden, UC Davis Arboretum & Botanic Garden
+### Funding: Base script funded by the Institute of Museum and Library 
+#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
+#   Moderate edits were added with funding from a cooperative agreement
+#   between the United States Botanic Garden and San Diego Botanic Garden
+#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Last Updated: June 2023 ; first written Feb 2020
+### R version 4.3.0
 
 ### DESCRIPTION:
-# Flags suspect points by adding a column for each type of flag, where
-#   FALSE = flagged. Most of the flagging is done through the
-#   'CoordinateCleaner' package, which was created for "geographic cleaning
-#   of coordinates from biologic collections."
+  ## This script flags potentially suspect points by adding a column for each 
+  #   type of flag, where FALSE = flagged. 
+  ## Much of the flagging is done through or inspired by the
+  #   CoordinateCleaner package, which was created for "geographic cleaning
+  #   of coordinates from biologic collections...Cleaning geographic coordinates
+  #   by multiple empirical tests to flag potentially erroneous coordinates, 
+  #   addressing issues common in biological collection databases."
+  #   See the article here:
+  #   https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13152
 
 ### INPUTS:
-# target_taxa_with_synonyms.csv
-# target_taxa_with_native_dist.csv (output from 1-get_taxa_countries.R)
-# outputs from 4-compile_occurrence_data.R
-# polygons ...
+  ## target_taxa_with_synonyms.csv
+  #   List of target taxa and synonyms; see example in the "Target taxa list"
+  #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
+  #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
+  ## Occurrence data compiled in 4-compile_occurrence_data.R
+  ## polygons ...
 
 ### OUTPUTS:
-# folder (spp_edited_points) with CSV of occurrence points for each target
-#   taxon (e.g., Quercus_lobata.csv)
-# Summary table with one row for each target taxon, listing number of
-#   points and number of flagged records in each flag column
-#   (flag_summary_by_sp.csv)
+  ## "taxon_points_ready-to-vet" folder 
+  #   For each taxon in your target taxa list, a CSV of occurrence records with 
+  #   newly-added flagging columns (e.g., Asimina_triloba.csv)
+  ## occurrence_record_summary_YYYY_MM_DD.csv
+  #   Add to the summary table created in 4-compile_occurrence_data.R: number of
+  #   flagged records in each flag column
 
 ################################################################################
 # Load libraries
 ################################################################################
 
-my.packages <- c(
-  "tidyverse","rnaturalearth","sp","tools","terra","textclean",
-  "CoordinateCleaner","sf"
-  )
-#install.packages(my.packages) #Turn on to install current versions
+my.packages <- c('tidyverse','textclean','CoordinateCleaner','tools','terra')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 2.0-20, 4.3.0, 1.7-29
+#install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
-  rm(my.packages)
+rm(my.packages)
 
 ################################################################################
 # Set working directory
 ################################################################################
 
-# either set manually:
-#main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/CWR North America Gap Analysis/Gap-Analysis-Mapping"
-  
-# or use 0-set_working_directory.R script:
-source("/Users/emily/Documents/GitHub/SDBG_CWR-trees-gap-analysis/0-set_working_directory.R")
-  
-# set up file structure within your main working directory
-data <- "occurrence_data"
-standard <- "standardized_occurrence_data"
-polygons <- "gis_layers"
+# use 0-set_working_directory.R script:
+source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
+
+# create folder for output data
+data_out <- "taxon_points_ready-to-vet"
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
+  dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
+             recursive=T)
+
+# assign folder where you have input data (saved in 4-compile_occurrence_data.R)
+data_in <- "taxon_points_raw"
 
 ################################################################################
 # Read in data
 ################################################################################
 
-# define projection
-wgs_proj <- sp::CRS(SRS_string="EPSG:4326")
-# get urban areas layer and transform projection to WGS84
-  # the ne_download function isn't working now... doing manually 9 Jan 2023
-  #urban.poly <- rnaturalearth::ne_download(scale = "large", type = "urban_areas")
-### !! THIS NEEDS TO BE TESTED STILL !!!
-urban.poly <- sf::read_sf(
-  file.path(main_dir,gis_dir,"ne_10m_urban_areas/ne_10m_urban_areas.shp"))
-urban.poly <- st_transform(urban.poly,wgs_proj)
+# read in target taxa list
+taxon_list <- read.csv(file.path(main_dir, taxa_dir,"target_taxa_with_synonyms.csv"),
+                       header=T, colClasses="character",na.strings=c("","NA"))
 
-# read in country-level native distribution data
-native_dist <- read.csv(file.path(main_dir,"taxa_metadata",
-  "target_taxa_with_native_dist.csv"), header = T, na.strings = c("","NA"),
-  colClasses = "character")
+# read in world countries layer created in 1-prep_gis_layers.R
+world_polygons <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
+                             "world_countries_10m.shp"))
 
-# read in country boundaries shapefile
-world_polygons <- vect(
-  file.path(main_dir,polygons,
-            "UIA_World_Countries_Boundaries/World_Countries__Generalized_.shp"))                             
-
-# create new folder for revised points, if not already existing
-if(!dir.exists(file.path(main_dir,data,standard,"taxon_edited_points")))
-  dir.create(file.path(main_dir,data,standard,"taxon_edited_points"), 
-    recursive=T)
+# read in urban areas layer created in 1-prep_gis_layers.R
+urban_areas <- vect(file.path(main_dir,gis_dir,"urban_areas_50m",
+                              "urban_areas_50m.shp"))
 
 ################################################################################
-# Iterate through taxon files and flag suspect points
+# Iterate through taxon files and flag potentially suspect points
 ################################################################################
 
 # list of taxon files to iterate through
-taxon_files <- list.files(path=file.path(main_dir,data,standard,
-                                         "taxon_raw_points"), 
+taxon_files <- list.files(path=file.path(main_dir,occ_dir,standardized_occ,data_in), 
                           ignore.case=FALSE, full.names=FALSE, recursive=TRUE)
-taxon_list <- file_path_sans_ext(taxon_files)
+target_taxa <- file_path_sans_ext(taxon_files)
 
 # start a table to add summary of results for each species
 summary_tbl <- data.frame(
@@ -120,7 +111,7 @@ summary_tbl <- data.frame(
     #data source and unique ID
     "UID","database","all_source_databases",
     #taxon
-    "taxon_name_accepted",
+    "taxon_name_accepted","taxon_name_status",
     "taxon_name","scientificName","genus","specificEpithet",
     "taxonRank","infraspecificEpithet","taxonIdentificationNotes",
     #event
@@ -137,144 +128,123 @@ summary_tbl <- data.frame(
     "localityDescription","locality","verbatimLocality",
     "locationNotes","municipality","higherGeography","county",
     "stateProvince","country","countryCode","countryCode_standard",
-    #additional optional data from target taxa list
-    "taxon_name_status","iucnredlist_category",
-    "natureserve_rank","fruit_nut",
-    #flag columns
     "latlong_countryCode",
+    #additional optional data from target taxa list
+    "rl_category","ns_rank",
+    #flag columns
     ".cen",".urb",".inst",".con",".outl",
     ".nativectry",
     ".yr1950",".yr1980",".yrna"
   )
 
 ## iterate through each species file to flag suspect points
-cat("Starting ","target ","taxa (", length(taxon_list)," total)",".\n\n",sep="")
+cat("Starting ","target ","taxa (", length(target_taxa)," total)",".\n\n",sep="")
 
-for (i in 1:length(taxon_list)){
+for (i in 1:length(target_taxa)){
 
-  taxon_file <- taxon_list[i]
+  taxon_file <- target_taxa[i]
   taxon_nm <- gsub("_", " ", taxon_file)
   taxon_nm <- mgsub(taxon_nm, c(" var "," subsp "), c(" var. "," subsp. "))
 
   # bring in records
-  taxon_df <- read.csv(file.path(main_dir,data,standard,"taxon_raw_points",
+  taxon_now <- read.csv(file.path(main_dir,occ_dir,standardized_occ,data_in,
     paste0(taxon_file, ".csv")))
+  
+  
+  # now we will go through a set of tests to flag potentially suspect records...
 
-  # make taxon points into a spatial object
-  taxon_spdf <- vect(
-    cbind(taxon_df$decimalLongitude,taxon_df$decimalLatitude),
-    atts=taxon_df, crs="EPSG:4326")
-  # add country polygon data to each point based on lat-long location
-  taxon_now <- intersect(taxon_spdf,world_polygons)
-  taxon_now <- as.data.frame(taxon_now)
-
-  ## CHECK POINT LOCATION AGAINST "ACCEPTED" COUNTRY DISTRUBUTION
-  #  this previously checked GlobalTreeSearch and IUCN Red List separately, but
-  #     I have now combined into one - old code is commented out below
-  ctry <- unique(unlist(strsplit(native_dist$all_native_dist_iso2[
-    native_dist$taxon_name_accepted==taxon_nm], "; ")))
-  if(!is.na(ctry[1])){
-  ## flag records where RL country doesn't match record's coordinate location
-    taxon_now <- taxon_now %>% mutate(.nativectry=(ifelse(
-      ISO %in% ctry, TRUE, FALSE)))
+  
+  ### CHECK LAT-LONG COUNTRY AGAINST "ACCEPTED" NATIVE COUNTRY DISTRUBUTION; 
+  #   flag when the lat-long country is not in the list of native countries;
+  #   we use the native countries compiled in 1-get_taxa_metadata.R, which
+  #   combines the IUCN Red List, BGCI GlobalTreeSearch, and manually-added data
+  native_ctrys <- unique(unlist(strsplit(taxon_now$all_native_dist_iso2, "; ")))
+  if(!is.na(native_ctrys[1])){
+  # flag records where native country doesn't match record's coordinate location
+    taxon_now <- taxon_now %>% 
+      mutate(.nativectry=(ifelse(latlong_countryCode %in% native_ctrys, 
+                                 TRUE, FALSE)))
   } else {
     taxon_now$.nativectry <- NA
   }
-  ## GlobalTreeSearch: species native country distribution list from GTS
-  #gts_ctry <- unique(unlist(strsplit(native_dist$gts_native_dist_iso2c[
-  #  native_dist$taxon_name_accepted==taxon_nm], "; ")))
-  #if(!is.na(gts_ctry[1])){
-  ## flag records where GTS country doesn't match record's coordinate location
-  #taxon_now <- taxon_now %>% mutate(.gtsnative=(ifelse(
-  #  ISO %in% gts_ctry, TRUE, FALSE)))
-  #} else {
-  #  taxon_now$.gtsnative <- NA
-  #}
-  ## IUCN Red List: species native country distribution list from RL
-  #rl_ctry <- unique(unlist(strsplit(native_dist$rl_native_dist_iso2c[
-  #  native_dist$taxon_name_accepted==taxon_nm], "; ")))
-  #if(!is.na(rl_ctry[1])){
-  ## flag records where RL country doesn't match record's coordinate location
-  #taxon_now <- taxon_now %>% mutate(.rlnative=(ifelse(
-  #  ISO %in% rl_ctry, TRUE, FALSE)))
-  #} else {
-  #  taxon_now$.rlnative <- NA
-  #}
 
-  ## SERIES OF VETTED TESTS FROM CoordinateCleaner PACKAGE
-  # Geographic Cleaning of Coordinates from Biologic Collections
-  # https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13152
-  #   Cleaning geographic coordinates by multiple empirical tests to flag
-  #     potentially erroneous coordinates, addressing issues common in
-  #     biological collection databases.
-  # tests included:
-  ## cc_cen - Identify Coordinates in Vicinity of Country and Province Centroids
-  ## cc_inst - Identify Records in the Vicinity of Biodiversity Institutions
-  taxon_now <- clean_coordinates(taxon_now,
-    lon = "decimalLongitude", lat = "decimalLatitude",
-    species = "taxon_name_accepted",
-    centroids_rad = 500, # radius around capital coords (meters); default=1000
-    inst_rad = 100, # radius around biodiversity institutions coords (meters)
-    tests = c("centroids","institutions")
-  )
-  ## adding urban area test separately because won't work when only 1 point;
-  # this is really slow when not using rnaturalearth version..
-  if(nrow(taxon_df)<2){
-    taxon_now$.urb <- NA
-    print("Taxa with fewer than 2 records will not be tested.")
-  } else {
-    taxon_now <- as.data.frame(taxon_now)
-    flag_urb <- cc_urb(taxon_now,
-      lon = "decimalLongitude",lat = "decimalLatitude",
-      ref = urban.poly, value = "flagged")
-    taxon_now$.urb <- flag_urb
-  }
-  ## for some reason the "sea" flag isn't working in the clean_coordinates 
-  #    function above; adding here separately
-  # actually, found it flags a lot on islands, etc. Skipping for now.
-  #flag_sea <- cc_sea(taxon_now2,
-  #   lon = "decimalLongitude", lat = "decimalLatitude", value = "flagged")
-  #taxon_now2$.sea <- flag_sea
-  ## the outlier section won't work inside the clean_coordinates function either
-  taxon_now <- as.data.frame(taxon_now)
-  flag_outl <- cc_outl(taxon_now,
-    lon = "decimalLongitude",lat = "decimalLatitude",
-    species = "taxon_name_accepted", method = "quantile",
-    mltpl = 4, value = "flagged")
-  taxon_now$.outl <- flag_outl
-
-  ## OTHER CHECKS
-  ## Given country vs. lat-long country
-  # check if given country matches lat-long country (CoordinateCleaner
-  #   has something like this but also flags when NA? Didn't love that)
+  
+  ### COMPARE THE COUNTRY LISTED IN THE RECORD VS. THE LAT-LONG COUNTRY; flag
+  #   when there is a mismatch; CoordinateCleaner package has something like 
+  #   this but also flags when the record doesn't have a country..didn't love that
   taxon_now <- taxon_now %>% mutate(.con=(ifelse(
-    (as.character(ISO) == as.character(countryCode_standard) &
-    !is.na(ISO) & !is.na(countryCode_standard)) |
-    is.na(ISO) | is.na(countryCode_standard), TRUE, FALSE)))
-  ## Year
+    (as.character(latlong_countryCode) == as.character(countryCode_standard) &
+       !is.na(latlong_countryCode) & !is.na(countryCode_standard)) |
+      is.na(latlong_countryCode) | is.na(countryCode_standard), TRUE, FALSE)))
+  
+  
+  ### FLAG OLDER RECORDS, based on two different year cutoffs (1950 & 1980)
   taxon_now <- taxon_now %>% mutate(.yr1950=(ifelse(
     (as.numeric(year)>1950 | is.na(year)), TRUE, FALSE)))
   taxon_now <- taxon_now %>% mutate(.yr1980=(ifelse(
     (as.numeric(year)>1980 | is.na(year)), TRUE, FALSE)))
+  
+  
+  ### FLAG RECORDS THAT DON'T HAVE A YEAR PROVIDED
   taxon_now <- taxon_now %>% mutate(.yrna=(ifelse(
     !is.na(year), TRUE, FALSE)))
+  
+  
+  ### FLAG RECORDS THAT HAVE COORDINATES NEAR BIODIVERSITY INSTITUTIONS AND/OR
+  ###   COUNTRY AND STATE/PROVINCE CENTROIDS
+  taxon_now <- CoordinateCleaner::clean_coordinates(taxon_now,
+    lon = "decimalLongitude", lat = "decimalLatitude",
+    species = "taxon_name_accepted",
+    # radius around country/state centroids (meters); default=1000
+    centroids_rad = 500, 
+    # radius around biodiversity institutions (meters)
+    inst_rad = 100, 
+    tests = c("centroids","institutions"))
+  
+  
+  ## FLAG RECORDS THAT HAVE COORDINATES IN URBAN AREAS
+  if(nrow(taxon_now)<2){
+    taxon_now$.urb <- NA
+    print("Taxa with fewer than 2 records will not be tested.")
+  } else {
+    taxon_now <- as.data.frame(taxon_now)
+    flag_urb <- CoordinateCleaner::cc_urb(taxon_now,
+      lon = "decimalLongitude",lat = "decimalLatitude",
+      ref = urban_areas, value = "flagged")
+    taxon_now$.urb <- flag_urb
+  }
+  
+  
+  ### FLAG SPATIAL OUTLIERS
+  taxon_now <- as.data.frame(taxon_now)
+  flag_outl <- CoordinateCleaner::cc_outl(taxon_now,
+    lon = "decimalLongitude",lat = "decimalLatitude",
+    species = "taxon_name_accepted", 
+    # read more about options for the method and the multiplier:
+    #   https://www.rdocumentation.org/packages/CoordinateCleaner/versions/2.0-20/topics/cc_outl
+    method = "quantile", mltpl = 4, 
+    value = "flagged")
+  taxon_now$.outl <- flag_outl
+
+  
+  # set everything up for saving...
 
   # set column order and remove a few unnecessary columns
-  taxon_now <- taxon_now %>% 
-    rename("latlong_countryCode" = "ISO") %>%
-    dplyr::select(all_of(col_names))
-  # df of completely unflagged points
+  taxon_now <- taxon_now %>% dplyr::select(all_of(col_names))
+  
+  # subset of completely unflagged points
   total_unflagged <- taxon_now %>%
-    filter(.cen & .urb &
-             .inst & .con & .outl & .yr1950 & .yr1980 & .yrna &
+    filter(.cen & .urb & .inst & .con & .outl & .yr1950 & .yr1980 & .yrna &
              (.nativectry | is.na(.nativectry)) &
              basisOfRecord != "FOSSIL_SPECIMEN" & 
              basisOfRecord != "LIVING_SPECIMEN" &
              establishmentMeans != "INTRODUCED" & 
              establishmentMeans != "MANAGED" &
-             establishmentMeans != "CULTIVATED" #& establishmentMeans != "INVASIVE"
+             establishmentMeans != "CULTIVATED"
     )
-  # optional df of unflagged points based on selected filters you'd like to use
+  
+  # OPTIONAL subset of unflagged points based on selected filters you'd like 
+  #   to use; change as desired; commented out lines are those we aren't using
   select_unflagged <- taxon_now %>%
     filter(.cen & .inst & .outl & 
              #.urb & .con & .yr1950 & .yr1980 & .yrna &
@@ -283,12 +253,13 @@ for (i in 1:length(taxon_list)){
              basisOfRecord != "LIVING_SPECIMEN" &
              establishmentMeans != "INTRODUCED" & 
              establishmentMeans != "MANAGED" &
-             establishmentMeans != "CULTIVATED" #& establishmentMeans != "INVASIVE"
+             establishmentMeans != "CULTIVATED"
     )
-  # add to summary table
+  
+  # add data to summary table
   summary_add <- data.frame(
-    taxon_name_accepted = taxon_list[i],
-    total_pts = nrow(taxon_now),
+    taxon_name_accepted = taxon_nm,
+    #total_pts = nrow(taxon_now),
     unflagged_pts = nrow(total_unflagged),
     selected_pts = nrow(select_unflagged),
     .cen = sum(!taxon_now$.cen),
@@ -304,12 +275,18 @@ for (i in 1:length(taxon_list)){
   summary_tbl[i,] <- summary_add
 
   # WRITE NEW FILE
-  write.csv(taxon_now, file.path(main_dir,data,standard,"taxon_edited_points",
+  write.csv(taxon_now, file.path(main_dir,occ_dir,standardized_occ,data_out,
     paste0(taxon_file, ".csv")), row.names=FALSE)
 
-  cat("Ending ", taxon_nm, ", ", i, " of ", length(taxon_list), ".\n\n", sep="")
+  cat("Ending ", taxon_nm, ", ", i, " of ", length(target_taxa), ".\n\n", sep="")
 }
 
+# add summary of points to summary we created in 4-compile_occurrence_data.R
+file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
+                      pattern = "summary_of_occurrences", full.names = T)
+orig_summary <- read.csv(file_nm)
+summary_tbl2 <- full_join(orig_summary,summary_tbl)
+
 # write summary table
-write.csv(summary_tbl, file.path(main_dir,data,
-  paste0("summary_of_output_points_", Sys.Date(), ".csv")),row.names = F)
+write.csv(summary_tbl2, file.path(main_dir,occ_dir,standardized_occ,
+  paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)

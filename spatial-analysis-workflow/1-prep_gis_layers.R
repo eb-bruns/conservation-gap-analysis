@@ -1,25 +1,37 @@
-### 0-prep_gis_layers.R
+### 1-prep_gis_layers.R
 ### Author: Emily Beckman Bruns
 ### Supporting institutions: The Morton Arboretum
 ### Funding: NSF ABI grant #1759759
 ### Last Updated: June 2023
-### R version 4.2.2
+### R version 4.3.0
 
 ### DESCRIPTION:
-  ## This script downloads and prepares the shapefiles we will use throughout
-  #   the scripts in the spatial-analysis-workflow
-
-## INPUTS
+  ## This script provides instructions for manually downloading some shapefiles
+  #   and automatically downloads & prepares other shapefiles, all of which we 
+  #   use in the spatial-analysis-workflow scripts
 
 ## OUTPUTS
+  ## Ecoregions shapefile, either global, North American, or US (see 
+  #   descriptions within script below)
+  ## world_countries_10m (folder with shapefile)
+  #   World countries layer from Natural Earth (https://www.naturalearthdata.com), 
+  #   downloaded using the rnaturalearth package and edited to remove lakes
+  #   and fix some 2-digit ISO code issues
+  ## urban_areas_50m (folder with shapefile)
+  #   Urban areas layer from Natural Earth:
+  #   https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-urban-areas/ 
 
 ################################################################################
 # Load libraries
 ################################################################################
 
-my.packages <- c('rnaturalearth','terra')
-# versions I used (in the order listed above): 0.3.3
+# install rnaturalearthhires package from github (not in CRAN for this R version)
+#install.packages("devtools") # install the devtools package if you don't have
+devtools::install_github("ropensci/rnaturalearthhires")
 
+# load packages
+my.packages <- c('rnaturalearth','terra')
+  # versions I used (in the order listed above): 0.3.3, 1.7-29
 # install.packages(my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -35,8 +47,8 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 # **Manually** download ecoregions shapefile(s)
 ################################################################################
 
-# Depending on the scale of your analysis, choose which ecoregions you'd like
-#   to use...
+# Depending on the scale/region of your analysis, choose which ecoregions you'd 
+#   like to use...
 
   ## Global terrestrial ecoregions from The Nature Conservancy (48 MB)
   #   To download, go to 
@@ -97,3 +109,13 @@ world_ctry[which(world_ctry$admin=="Kosovo"),"iso_a2"] <- "XK"
 writeVector(world_ctry, file.path(main_dir,gis_dir,"world_countries_10m"),
             filetype = "ESRI Shapefile")
 
+################################################################################
+# Download and save urban areas layer, in case you use for vetting points later
+################################################################################
+
+# download urban areas layer using rnaturalearth package
+urban <- vect(ne_download(scale = 50, type = "urban_areas", returnclass = "sf"))
+
+# save file
+writeVector(urban, file.path(main_dir,gis_dir,"urban_areas_50m"),
+            filetype = "ESRI Shapefile")

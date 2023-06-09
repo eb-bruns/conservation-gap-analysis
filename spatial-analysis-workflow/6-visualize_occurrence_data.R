@@ -1,53 +1,61 @@
-################################################################################
-
-## 6-visualize_occurrence_data.R
-
-### Authors: Emily Beckman Bruns
-### Funding: Base script was funded by the Institute of Museum and Library 
-# Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-# Moderate edits were added with funding from a cooperative agreement
-# between the United States Botanic Garden and San Diego Botanic Garden
-# (subcontracted to The Morton Arboretum), with support from
-# Botanic Gardens Conservation International U.S.
-
-### Last updated: 3 January 2023
-### R version 4.2.2
+### 6-visualize_occurrence_data.R
+### Author: Emily Beckman Bruns
+### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
+#   International-US, United States Botanic Garden, San Diego Botanic Garden,
+#   Missouri Botanical Garden
+### Funding: Base script funded by the Institute of Museum and Library 
+#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
+#   Moderate edits were added with funding from a cooperative agreement
+#   between the United States Botanic Garden and San Diego Botanic Garden
+#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Last Updated: June 2023 ; first written March 2020
+### R version 4.3.0
 
 ### DESCRIPTION:
-# Creates interactive (HTML) occurrence point map for each target species,
-#   for exploring. Includes toggles that show points flagged in
-#   5-refine_occurrence_data.R
+  ## Creates interactive (HTML) occurrence point map for each target species,
+  #   for exploring. Includes toggles that show points flagged in
+  #   5-refine_occurrence_data.R
 
 ### INPUTS:
-# target_taxa_with_synonyms.csv
-# Occurrence points from 5-refine_occurrence_data.R
+  ## target_taxa_with_synonyms.csv
+  #   List of target taxa and synonyms; see example in the "Target taxa list"
+  #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
+  #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
+  ## Occurrence data flagged in 5-refine_occurrence_data.R
 
-### OUTPUTS:
-# interactive_maps/visualize_occurrence_data folder with HTML map for each 
-#   target taxa (e.g., Quercus_lobata_occurrence_map.html), which can be 
-#   downloaded and opened in your browser for exploring
+### OUTPUTS: [[[NEEDS EDITING]]]
+  ## "visualize_taxon_points" folder
+  #   For each taxon in your target taxa list, an interactive HTML map is
+  #   created, which can be downloaded and opened in your browser for exploring 
+  #   (e.g., Asimina_triloba_XXXXX.csv)
 
 ################################################################################
 # Load libraries
 ################################################################################
 
-rm(list=ls())
-my.packages <- c("ggplot2","maps","leaflet","RColorBrewer","dplyr","raster",
-                 "terra")
-#install.packages(my.packages) #Turn on to install current versions
+my.packages <- c('tidyverse','leaflet','RColorBrewer','terra')
+                 #ggplot2','maps','raster',
+  # versions I used (in the order listed above): 
+#install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
-  rm(my.packages)
+rm(my.packages)
 
 ################################################################################
 # Set working directory
 ################################################################################
 
-# either set manually:
-#main_dir <- "/Volumes/GoogleDrive-103729429307302508433/My Drive/CWR North America Gap Analysis/Gap-Analysis-Mapping"
-  
-# or use 0-set_working_directory.R script:
-source("/Users/emily/Documents/GitHub/SDBG_CWR-trees-gap-analysis/0-set_working_directory.R")
-  
+# use 0-set_working_directory.R script:
+source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
+
+# create folder for output data
+data_out <- "XXXXXX"
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
+  dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
+             recursive=T)
+
+# assign folder where you have input data (saved in 5-refine_occurrence_data.R)
+data_in <- "taxon_points_ready-to-vet"
+
 ################################################################################
 # Use leaflet package to create interactive maps to explore (html)
 ################################################################################

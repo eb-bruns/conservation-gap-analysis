@@ -29,7 +29,7 @@
 ################################################################################
 
 # install rnaturalearthhires package from github (not in CRAN for this R version)
-#install.packages("devtools") # install the devtools package if you don't have
+#install.packages("devtools") # first install the devtools package if you don't have
 devtools::install_github("ropensci/rnaturalearthhires")
 
 # load packages
@@ -94,8 +94,8 @@ lakes <- vect(ne_download(scale = 10, type = "lakes", category = "physical",
   # remove lakes
 world_ctry <- erase(world_ctry,lakes)
 
-# there is an issue with the 10m countries dataset, where some 2-digit country
-#   codes (which we need later) are -99; fixing
+# there is an issue with the 10m countries dataset where some 2-digit country
+#   codes (which we need later) are -99; fixing...
 sort(unique(world_ctry$iso_a2)) # see if there is "-99" or NA.. if yes...
   # see which countries have the issue:
 unique(as.data.frame(world_ctry[which(

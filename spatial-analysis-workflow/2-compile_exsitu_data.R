@@ -1494,7 +1494,7 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
 
 # read in all compiled ex situ data (exported above)
 exsitu <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "All_ExSitu_Compiled_2023-06-08.csv"), #change this to your version!
+  "All_ExSitu_Compiled_2023-06-15.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset

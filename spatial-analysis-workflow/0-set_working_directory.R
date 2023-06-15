@@ -9,41 +9,46 @@
 
 ### DESCRIPTION:
   ## This script sets the working environment for the computer on which you are
-  # working. You can add your own computer and working directories by filling in 
-  # the blanks (________) below! The first entry is an example for my computer.
+  #     working. You need to add your own computer and file paths by filling 
+  #     in the blanks (________) below! The first entry is an example for my
+  #     computer.
   ## This script also creates the initial folder structure used for the
-  # scripts in the spatial-analysis-workflow.
+  #     scripts in the spatial-analysis-workflow.
 
 ################################################################################
 # Set working environment depending on your computer
 ################################################################################
 
-# Use the following line to check your "nodename"
-#Sys.info()[4]
+# The following line gives your "nodename", which you will paste into the first
+#   blank "________" (line 38)
+Sys.info()[4]
 
 ## For Emily Bruns:
 if (Sys.info()[4] == "Africa.local") {
-  # main working directory
-  main_dir <- "/Users/emily/Library/CloudStorage/GoogleDrive-ebeckman@mortonarb.org/Shared drives/Global Tree Conservation Program/4. GTCP_Projects/Gap Analyses/User Guide/Example_spatial-analysis-workflow"
-  # [optional] location of cloned GapAnalysis repository; we use this in 
-  #   7-run_GapAnalysis_package.R
-  gap_dir <- "/Users/emily/Documents/GitHub/GapAnalysis/R"
-  # set location for private login information (e.g., for GBIF); we use this
-  #   in 3-get_occurrence_data.R
+  # I like my main directory in Google Drive for easy sharing; to do this, 
+  #   you first need to install "Drive for desktop", see here:
+  #   https://support.google.com/a/users/answer/13022292?hl=en
+  # It's also totally great to keep everything local and not linked to the cloud!
+  main_dir <- "/Users/emily/Library/CloudStorage/GoogleDrive-ebeckman@mortonarb.org/Shared drives/Global Tree Conservation Program/4. GTCP_Projects/Gap Analyses/User Guide ~ Conservation Gap Analysis/Example_spatial-analysis-workflow"
   log_loc <- "/Users/emily/Documents/gap-analysis_passwords.txt"
-  # print computer name, to let you know you're in the right spot
+  gap_dir <- "/Users/emily/Documents/GitHub/GapAnalysis_EBB/R"
   print(paste("Working from the lovely", Sys.info()[4]))
 
-## For additional user or workstation (fill in ________ with your info):
+## For additional user or workstation (fill in each ________ with your file path)
 } else if (Sys.info()[4] == "________") {
-  # main working directory
+  # main working directory (folder where you want most files to be)
+  #   if you're not sure how to to find the path of a folder, you can right click
+  #   the folder and do the following based on your operating system --
+  #   For Mac: click "Get Info" and copy the text in the "Where:" field
+  #   For Windows: click "Properties" and copy the text in the "Location:" field
   main_dir <- "________"
+  # set location for log-in information text file (e.g., for GBIF)
+  #   we use this in 3-get_occurrence_data.R
+  log_loc <- "________"
   # [optional] location of cloned GapAnalysis repository; we use this in 
   #   7-run_GapAnalysis_package.R
+  # Just leave this blank if you're not to this point in the workflow yet!
   gap_dir <- "________"
-  # set location for private login information (e.g., for GBIF); we use this
-  #   in 3-get_occurrence_data.R
-  log_loc <- "________"
   # print computer name, to let you know you're in the right spot
   print(paste("Working from the lovely", Sys.info()[4]))
   
@@ -53,7 +58,7 @@ if (Sys.info()[4] == "Africa.local") {
   # default, which sets the working directory as the folder from which you
   #   opened the scripts/project
   setwd(getwd())
-  print("You should add your info to the 1-set_working_directory.R script so
+  print("You should add your info to the 0-set_working_directory.R script so
     this line automatically sets up all the working directories you'll be using!")
 }
 
@@ -62,7 +67,7 @@ if (Sys.info()[4] == "Africa.local") {
 ################################################################################
 
 # assign the main folders you'll reference in multiple scripts, and create
-#   them if they're not already present
+#   them if they're not already present; you don't need to change anything here
 
 # place your target_taxa_with_synonyms.csv file in this folder
 taxa_dir <- "target_taxa"

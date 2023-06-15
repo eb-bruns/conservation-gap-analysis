@@ -59,8 +59,8 @@
   ## All outputs are optional; you simply run whichever sections you want, and 
   #   each produces an output. The raw data is downloaded to the corresponding
   #   folder in occurrence_data > raw_occurrence_data, then a file with 
-  #   standardized columns is saved to the standardized_occurrence_data folder
-  #   and named like so:
+  #   standardized columns is saved to standardized_occurrence_data > input_datasets
+  #   folder and named like so:
   # A) gbif.csv
   # B) idigbio.csv
   # C) redlist.csv
@@ -84,7 +84,8 @@ lapply(my.packages, require, character.only=TRUE)
 # Set working directory
 ################################################################################
 
-# use 0-set_working_directory.R script:
+# use 0-set_working_directory.R script
+  # change this path based on where the script is located on your computer:
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 # create folder for output data
@@ -155,9 +156,9 @@ if(!dir.exists(file.path(main_dir,occ_dir,raw_occ,"GBIF")))
 # either read in a text file with username, password, and email (one on each
 #   line) or manually fill in below (if you're not saving this script publicly):
 login <- read_lines(log_loc)
-  user  <- login[1] #"user"
-  pwd   <- login[2] #"password"
-  email <- login[3] #"email"
+  user  <- login[1] #username
+  pwd   <- login[2] #password
+  email <- login[3] #email
   rm(login)
 # get GBIF taxon keys for all taxa in target list
 keys <- sapply(taxon_names,function(x) name_backbone(name=x)$speciesKey,

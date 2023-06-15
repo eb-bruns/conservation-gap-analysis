@@ -124,6 +124,7 @@ distinct <- dplyr::distinct
 ################################################################################
 
 # use 0-set_working_directory.R script:
+  # update to your path
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 ################################################################################
@@ -787,9 +788,9 @@ inst_data <- inst_data %>%
 all_data7 <- left_join(all_data6,inst_data)
 str(all_data7)
 
-##
-## Provenance type
-##
+######################
+## A) Provenance type
+######################
 
 # save original version of column for reference
 all_data7$orig_prov_type <- all_data7$prov_type
@@ -848,9 +849,9 @@ all_data7$prov_type[which(is.na(all_data7$prov_type))] <- "NG"
 # check results
 table(all_data7$prov_type)
 
-##
+############################
 ## B) Number of Individuals
-##
+############################
 
 ## IF NEEDED: change # of individuals for rows that say dead/removed, etc., if
 # you have a 'condition' column
@@ -899,9 +900,9 @@ write.csv(no_indiv, file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
 all_data7 <- all_data7[which(all_data7$num_indiv > 0),]
 nrow(all_data7)
 
-##
+#############################
 ## C) Latitude and Longitude
-##
+#############################
 
 all_data8 <- all_data7
 
@@ -1101,9 +1102,9 @@ all_data9$prov_type[which(all_data9$latlong_det == "Given in original record" &
   all_data9$prov_type == "H")] <- "H?"
 table(all_data9$prov_type)
 
-##
+#######################
 ## D) Collection year
-##
+#######################
 
 # this is not usually vital and takes some effort depending on your dataset;
 # if you decide it's not necessary to standardize collection year, just comment 
@@ -1161,16 +1162,16 @@ all_data9$coll_year <- as.numeric(all_data9$coll_year)
 #all_data9$coll_year <- as.numeric(all_data9$coll_year)
 sort(unique(all_data9$coll_year))
 
-##
+#####################
 ## E) Lineage number
-##
+#####################
 
 # remove lin_num when same as acc_num
 all_data9[which(all_data9$acc_num == all_data9$lin_num),]$lin_num <- NA
 
-##
-## F) Locality
-##
+###########################
+## F) Locality description
+###########################
 
 # create all_locality column (concatenating all locality data into one column 
 #   for easy reference, especially when geolocating)
@@ -1187,9 +1188,9 @@ all_data9$all_locality[which(all_data9$all_locality ==
   " |  |  |  |  |  |  |  |  |  |  |  | ")] <- NA
 head(all_data9$all_locality)
 
-##
+#######################
 ## G) Institution type
-##
+#######################
 
 # add inst_type for gene bank data
 all_data9$inst_type[which(is.na(all_data9$inst_type))] <- "Gene/Seed Bank"
@@ -1199,10 +1200,10 @@ table(all_data9$inst_type)
 # check data_source column too
 table(all_data9$data_source)
 
-##
+##################################################################
 ## H) Combine individuals (same institution and accession number)
 ##      so that everything is (hopefully) at the accession-level
-##
+##################################################################
 
 ## some institutions provided data at the accession level and some provided it
 ## at the individual level; we want everything at the accession level for
@@ -1339,9 +1340,9 @@ all_data9$acc_num <- mgsub(all_data9$acc_num,
 unique(all_data9$acc_num)
 nrow(all_data9)
 
-##
-## I) Add Unique ID Column
-##
+##############################
+## I) Add Universal ID column
+##############################
 
 # create UID with institution name, accession number, provenance type, and 
 # taxon name; also remove duplicates based on new UID and sums individuals
@@ -1363,7 +1364,7 @@ all_data9 <- rbind(need_id,dont_need_id)
 nrow(all_data9)
 
 ################################################################################
-# 7. Summary statistics
+# 7. Save output
 ################################################################################
 
 ## SELECT ONLY THE COLUMNS YOU WANT one last time (see keep_col object created 
@@ -1384,7 +1385,7 @@ write.csv(data_sel, file.path(main_dir, exsitu_dir,standardized_exsitu,
 
 
 ################################################################################
-# 8. (Optionally) Explore georeferencing needs
+# 8. [OPTIONAL] Explore georeferencing needs and save file for geolocation
 ################################################################################
 
 # if desired, you can try to manually find the latitude and longitude for 
@@ -1487,7 +1488,8 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
 ### We will read this in next!
 
 ################################################################################
-# 9. (If you geolocated) Add geolocated data, after manual geolocation
+# 9. (If you geolocated) Add geolocated data, after manual geolocation;
+#    save final output file
 ################################################################################
 
 # read in all compiled ex situ data (exported above)
@@ -1584,7 +1586,8 @@ write.csv(exsitu_all, file.path(main_dir, occ_dir, raw_occ, "Ex_situ",
 ### it goes between step 8 and 9 above, if using
 
 ################################################################################
-# 8.5 (Optionally) Create file(s) for GEOLocate (https://www.geo-locate.org)
+# 8.5 (Optionally) Create file(s) for GEOLocate (https://www.geo-locate.org),
+#     which needs specific column headers
 ################################################################################
 
 # read in data in again, if you didn't just run the whole script
@@ -1641,6 +1644,11 @@ lapply(seq_along(sp_split), function(i) write.csv(sp_split[[i]],
 ### !!!
 ### ! NOW GO GEOLOCATE !
 ### !!!
+
+## YOU'LL ALSO NEED TO EDIT SECION 9 TO FIT YOUR GeoLocate OUTPUT !!
+
+
+
 
 
 

@@ -28,8 +28,9 @@
   #   List of target taxa and synonyms; see example in the "Target taxa list"
   #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
   #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
-  ## occurrence data downloaded in 3-get_occurrence_data.R
-  #   Including any/all of: gbif.csv, idigbio.csv, redlist.csv, seinet.csv, 
+  ## input_datasets (folder)
+  #   Occurrence data downloaded in 3-get_occurrence_data.R, including
+  #   any/all of: gbif.csv, idigbio.csv, redlist.csv, seinet.csv, 
   #   bien.csv, fia.csv, exsitu.csv, and/or additional files if added manually 
   #   via instructions provided in that script.
   ## world_countries_10m.shp
@@ -47,7 +48,7 @@
   ## summary_of_occurrences_YYYY_MM_DD.csv
   #   Summary table with one row for each target taxon, listing the number of 
   #   records with valid lat-long and number with locality description only
-  ## "taxon_points_raw" folder
+  ## taxon_points_raw (folder)
   #   For each taxon in your target taxa list, a CSV of occurrence records with 
   #   valid lat-long coordinates (e.g., Asimina_triloba.csv)
   
@@ -72,6 +73,7 @@ count <- dplyr::count
 ################################################################################
 
 # use 0-set_working_directory.R script:
+  # update to your path
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 # create folder for output data

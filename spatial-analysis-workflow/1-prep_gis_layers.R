@@ -10,6 +10,9 @@
   #   and automatically downloads & prepares other shapefiles, all of which we 
   #   use in the spatial-analysis-workflow scripts
 
+## INPUTS
+  ## None
+
 ## OUTPUTS
   ## Ecoregions shapefile, either global, North American, or US (see 
   #   descriptions within script below)
@@ -41,6 +44,7 @@ rm(my.packages)
 ################################################################################
 
 # use 0-set_working_directory.R script:
+  # update to your path
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
 
 ################################################################################

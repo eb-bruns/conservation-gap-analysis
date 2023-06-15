@@ -48,6 +48,7 @@ lapply(my.packages, require, character.only=TRUE)
 ################################################################################
 
 # use 0-set_working_directory.R script:
+  # update to your path
 source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis-workflow/0-set_working_directory.R")
   
 ################################################################################

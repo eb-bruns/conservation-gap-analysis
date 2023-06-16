@@ -1010,7 +1010,7 @@ coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
   value = "flagged",verbose = TRUE)
 
 # IF the taxon is native to N/S America, make longitude value negative (you need
-#   a taxon_region column for this!)...
+#   a taxon_region column for this, or could update code to work with countries!)...
 #unique(all_data8$taxon_region)
 #all_data8 <- all_data8 %>% 
 #  mutate(long_dd = if_else(long_dd > 0 & 

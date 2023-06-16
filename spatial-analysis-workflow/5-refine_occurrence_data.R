@@ -146,8 +146,8 @@ cat("Starting ","target ","taxa (", length(target_taxa)," total)",".\n\n",sep=""
 for (i in 1:length(target_taxa)){
 
   taxon_file <- target_taxa[i]
-  taxon_nm <- gsub("_", " ", taxon_file)
-  taxon_nm <- mgsub(taxon_nm, c(" var "," subsp "), c(" var. "," subsp. "))
+  taxon_nm <- mgsub(taxon_file, c("_"," var "," subsp "), 
+                                c(" "," var. "," subsp. "))
 
   # bring in records
   taxon_now <- read.csv(file.path(main_dir,occ_dir,standardized_occ,data_in,
@@ -225,7 +225,10 @@ for (i in 1:length(target_taxa)){
     species = "taxon_name_accepted", 
     # read more about options for the method and the multiplier:
     #   https://www.rdocumentation.org/packages/CoordinateCleaner/versions/2.0-20/topics/cc_outl
-    method = "quantile", mltpl = 4, 
+    # if you make the multiplier larger, it will flag less points.
+    # the default is 5; you may need to experiment a little to see what works
+    #   best for most of your target taxa (script #6 helps you view flagged pts)
+    method = "quantile", mltpl = 7, 
     value = "flagged")
   taxon_now$.outl <- flag_outl
 
@@ -287,7 +290,7 @@ for (i in 1:length(target_taxa)){
 # add summary of points to summary we created in 4-compile_occurrence_data.R
 file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
                       pattern = "summary_of_occurrences", full.names = T)
-orig_summary <- read.csv(file_nm)
+orig_summary <- read.csv(file_nm, colClasses = "character")
 summary_tbl2 <- full_join(orig_summary,summary_tbl)
 
 # write summary table

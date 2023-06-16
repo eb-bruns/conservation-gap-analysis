@@ -1,4 +1,4 @@
-### 6-visualize_occurrence_data.R
+### 6-visualize_occurrence_points.R
 ### Author: Emily Beckman Bruns
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,

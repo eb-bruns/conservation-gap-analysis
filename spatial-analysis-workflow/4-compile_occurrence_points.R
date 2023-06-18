@@ -16,7 +16,7 @@
   #   the 3-get_occurrence_data.R script. We remove any rows for taxa not in our 
   #   list (target_taxa_with_synonyms.csv), add a UID (universal identifier) 
   #   that can be used to manually flag points in the maps created in script
-  #   6-visualize_occurrence_data.R, and check the standardization of key 
+  #   6-visualize_occurrence_points.R; we also check the standardization of key 
   #   columns including localityDescription, year, basisOfRecord,
   #   establishmentMeans, decimalLatitude, and decimalLongitude. Records without 
   #   valid coordinates or that fall in the water are separated out and saved, 
@@ -160,7 +160,7 @@ unique(taxon_list$taxon_name_acc)[
 ################################################################################
 
 # now we add a UID that can be used to manually flag points in the maps created 
-#   later in script 6-visualize_occurrence_data.R
+#   later in script 6-visualize_occurrence_points.R
 
 # !!!
 ## IT IS VERY IMPORTANT to be careful here IF you are adding additional 
@@ -293,6 +293,8 @@ nrow(all_data2)
 
 # write file of raw data before selecting only geolocated records;
 #   this will be used for the GapAnalysis package's summary of occurrences
+# if you don't plan to run the GapAnalysis package, you can skip this step
+#   since it saves a pretty large file if lots of points for your taxa!
 write.csv(all_data2, file.path(main_dir,occ_dir,standardized_occ,
                               paste0("all_occurrence_data_raw_", Sys.Date(), 
                                      ".csv")), row.names = F)
@@ -487,7 +489,7 @@ rm(geo_pts)
 
 # write file if you'd like; not necessary since we write taxon-level files
 #write.csv(geo_pts2, file.path(main_dir,occ_dir,standardized_occ,
-#  paste0("all_occurrence_data_compiled_", Sys.Date(), ".csv")), row.names = F)
+#  paste0("all_occurrence_points_compiled_", Sys.Date(), ".csv")), row.names = F)
 
 ################################################################################
 # Create taxon-level summary table

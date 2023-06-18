@@ -28,7 +28,7 @@
   #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
   #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
   ## taxon_points_raw (folder)
-  #   Occurrence data compiled in 4-compile_occurrence_data.R
+  #   Occurrence data compiled in 4-compile_occurrence_points.R
   ## world_countries_10m.shp & urban_areas_50m.shp
   #   These shapefiles were created in 1-prep_gis_layers.R
 
@@ -37,7 +37,7 @@
   #   For each taxon in your target taxa list, a CSV of occurrence records with 
   #   newly-added flagging columns (e.g., Asimina_triloba.csv)
   ## occurrence_record_summary_YYYY_MM_DD.csv
-  #   Add to the summary table created in 4-compile_occurrence_data.R: number of
+  #   Add to the summary table created in 4-compile_occurrence_points.R: number of
   #   flagged records in each flag column
 
 ################################################################################
@@ -64,7 +64,7 @@ if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
   dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
              recursive=T)
 
-# assign folder where you have input data (saved in 4-compile_occurrence_data.R)
+# assign folder where you have input data (saved in 4-compile_occurrence_points.R)
 data_in <- "taxon_points_raw"
 
 ################################################################################
@@ -95,7 +95,6 @@ target_taxa <- file_path_sans_ext(taxon_files)
 # start a table to add summary of results for each species
 summary_tbl <- data.frame(
   taxon_name_accepted = "start", 
-  total_pts = "start",
   unflagged_pts = "start", 
   selected_pts = "start", 
   .cen = "start", 
@@ -146,7 +145,7 @@ cat("Starting ","target ","taxa (", length(target_taxa)," total)",".\n\n",sep=""
 for (i in 1:length(target_taxa)){
 
   taxon_file <- target_taxa[i]
-  taxon_nm <- mgsub(taxon_file, c("_"," var "," subsp "), 
+  taxon_nm <- mgsub(taxon_file, c("_","_var_","_subsp_"), 
                                 c(" "," var. "," subsp. "))
 
   # bring in records
@@ -265,7 +264,6 @@ for (i in 1:length(target_taxa)){
   # add data to summary table
   summary_add <- data.frame(
     taxon_name_accepted = taxon_nm,
-    #total_pts = nrow(taxon_now),
     unflagged_pts = nrow(total_unflagged),
     selected_pts = nrow(select_unflagged),
     .cen = sum(!taxon_now$.cen),
@@ -287,11 +285,14 @@ for (i in 1:length(target_taxa)){
   cat("Ending ", taxon_nm, ", ", i, " of ", length(target_taxa), ".\n\n", sep="")
 }
 
-# add summary of points to summary we created in 4-compile_occurrence_data.R
+# add summary of points to summary we created in 4-compile_occurrence_points.R
 file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
                       pattern = "summary_of_occurrences", full.names = T)
 orig_summary <- read.csv(file_nm, colClasses = "character")
-summary_tbl2 <- full_join(orig_summary,summary_tbl)
+summary_tbl2 <- full_join(orig_summary,summary_tbl,by="taxon_name_accepted")
+summary_tbl2
+
+# save manual_point_edits.csv file 
 
 # write summary table
 write.csv(summary_tbl2, file.path(main_dir,occ_dir,standardized_occ,

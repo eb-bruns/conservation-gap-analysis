@@ -15,7 +15,7 @@
   ## This script creates an interactive (HTML) occurrence point map for each 
   #   target taxon, for exploring and (optionally) retrieving the UIDs of points 
   #   to be removed before final anlayses. Includes toggles that show points 
-  #   flagged in 5-refine_occurrence_data.R
+  #   flagged in 5-flag_occurrence_points.R
 
 ### INPUTS:
   ## target_taxa_with_synonyms.csv
@@ -23,8 +23,8 @@
   #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
   #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
   ## taxon_points_ready-to-vet (folder) 
-  #   Occurrence data output from 5-refine_occurrence_data.R
-  # world_countries_10m.shp
+  #   Occurrence data output from 5-flag_occurrence_points.R
+  ## world_countries_10m.shp
   #   Shapefile created in 1-prep_gis_layers.R script. It's the Natural Earth 
   #   10m countries layer with the lakes cut out and some ISO_2A issues fixed.
 
@@ -32,7 +32,11 @@
   ## visualize_taxon_points (folder)
   #   For each taxon in your target taxa list, an interactive HTML map is
   #   created, which can be downloaded and opened in your browser for exploring 
-  #   (e.g., Asimina_triloba_map-for-vetting.html)
+  #   (e.g., Asimina_triloba__map-for-vetting.html)
+  ## manual_point_edits.csv
+  #   File that can be filled in manually while reviewing the maps - optional; 
+  #   see instructions in the "Manual point edits" tab in 
+  #   Gap-analysis-workflow_metadata workbook
 
 ################################################################################
 # Load libraries
@@ -58,11 +62,11 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 
 # create folder for output data
 data_out <- "visualize_taxon_points"
-if(!dir.exists(file.path(main_dir,occ_dir,data_out)))
-  dir.create(file.path(main_dir,occ_dir,data_out), 
+if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
+  dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
              recursive=T)
 
-# assign folder where you have input data (saved in 5-refine_occurrence_data.R)
+# assign folder where you have input data (saved in 5-flag_occurrence_points.R)
 data_in <- "taxon_points_ready-to-vet"
 
 ################################################################################
@@ -76,6 +80,18 @@ taxon_list <- read.csv(file.path(main_dir,taxa_dir,"target_taxa_with_synonyms.cs
 # select accepted taxa
 target_taxa <- taxon_list %>% filter(taxon_name_status == "Accepted")
 nrow(target_taxa)
+
+# save file that can be (optionally) used for manually flagging points for removal
+edits <- data.frame(taxon_name_accepted = target_taxa$taxon_name_accepted,
+                    remove_id	= "", keep_id	= "", remove_bounding_box = "",
+                    reviewer_notes	= "", reviewer_name = "")
+if(file.exists(file.path(main_dir,occ_dir,standardized_occ,"manual_point_edits.csv"))){
+  "You've already created this file; if you'd like to overwrite it, run the 'else' statement manually"
+} else {
+  write.csv(edits, file.path(main_dir,occ_dir,standardized_occ,
+                             "manual_point_edits.csv"), row.names = F)
+}
+
 # make taxon list with underscores added where spaces, to format for reading/
 #   writing when we cycle through in our loop below
 taxa_cycle <- unique(mgsub(target_taxa$taxon_name_accepted, 
@@ -95,7 +111,7 @@ world_polygons <- sf::st_as_sf(world_polygons)
 ### cycle through each species file and create map
 for(i in 1:length(taxa_cycle)){
 
-  ## read in occurrence records (output from 5-refine_occurrenec_data.R)
+  ## read in occurrence records (output from 5-flag_occurrence_points.R)
   taxon_now <- read.csv(file.path(main_dir,occ_dir,standardized_occ,data_in,
                                   paste0(taxa_cycle[i],".csv")))
 
@@ -144,7 +160,7 @@ for(i in 1:length(taxa_cycle)){
     addControl(
       'See more information about the
       <a href="https://github.com/eb-bruns/conservation-gap-analysis/blob/main/spatial-analysis-workflow/3-get_occurrence_data.R">data sources</a> and 
-      <a href="https://github.com/eb-bruns/conservation-gap-analysis/blob/main/spatial-analysis-workflow/5-refine_occurrence_data.R">flagging methodology</a>.',
+      <a href="https://github.com/eb-bruns/conservation-gap-analysis/blob/main/spatial-analysis-workflow/5-flag_occurrence_points.R">flagging methodology</a>.',
         position = "bottomright") %>%      
     addControl(
       "Note that 'Ex_situ' does <b>not</b> indicate the locations of botanic gardens;</br> 
@@ -413,7 +429,8 @@ for(i in 1:length(taxa_cycle)){
                         "Recorded prior to 1980 (.yr1980)",
                         "Record year unknown (.yrna)"),
       options = layersControlOptions(collapsed = FALSE)) %>%
-      # you can unchecked groups in the control panel with a 'hideGroup'
+      # you can un-check groups in the control panel with a 'hideGroup';
+      # it's nice to hide the filters you're not interested in
     hideGroup("In urban area (.urb)") %>%
     hideGroup("Recorded prior to 1980 (.yr1980)") %>%
     hideGroup("Record year unknown (.yrna)") %>%
@@ -425,8 +442,9 @@ for(i in 1:length(taxa_cycle)){
   final_map
 
   ## save map
-  try(htmlwidgets::saveWidget(final_map, file.path(main_dir,occ_dir,data_out,
-    paste0(taxa_cycle[i], "_occurrence_map.html"))))
+  try(htmlwidgets::saveWidget(final_map, file.path(main_dir,occ_dir,
+                                                   standardized_occ,data_out,
+    paste0(taxa_cycle[i], "__map-for-vetting.html"))))
 
   cat("\tEnding ", taxa_cycle[i], ", ", i, " of ", length(taxa_cycle), ".\n\n", sep="")
 }

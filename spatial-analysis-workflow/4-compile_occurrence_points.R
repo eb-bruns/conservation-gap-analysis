@@ -434,8 +434,8 @@ geo_pts <- geo_pts %>% arrange(desc(year))
       #   herbariun specimen, which experts can use to review the record
 unique(geo_pts$database)
 geo_pts$database <- factor(geo_pts$database,
-  levels = c("GBIF","iDigBio","IUCN_RedList","NorthAm_herbaria",
-             "FIA","BIEN","Ex_situ"))
+  levels = c("NorthAm_herbaria","iDigBio","GBIF","FIA","IUCN_RedList",
+             "BIEN","Ex_situ"))
 geo_pts <- geo_pts %>% arrange(database)
 
 ## remove duplicates --
@@ -514,7 +514,7 @@ write.csv(summary, file.path(main_dir,occ_dir,standardized_occ,
   paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)
 
 ################################################################################
-# Split by species to save
+# Split by taxa to save
 ################################################################################
 
 # split records to create one CSV for each target taxon

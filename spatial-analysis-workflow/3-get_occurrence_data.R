@@ -194,9 +194,10 @@ gbif_download <- occ_download(
 download_key <- gbif_download
   # must wait for download to complete before continuing;
   # it may take a while (up to 3 hours) if you have a large taxa list;
-  # function below will pause script until the download is ready;
+  # function below will pause script until the download is ready, though it
+  #   seems like its not working quite right for me right now?
   # you can also log in on the GBIF website and go to your profile to see the
-  # progress of your download
+  #   progress of your download
 occ_download_wait(download_key, status_ping=10, quiet=TRUE)
   # get download when its ready then unzip and read in
 occ_download_get(key=download_key[1],
@@ -1014,7 +1015,7 @@ state_abb <- c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID",
   "IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE",
   "NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN",
   "TX","UT","VT","WV","WA","VA","WI","WY"
-    # turn these off if you don't want territories:
+    # comment these out if you don't want territories:
   ,"AS","FM","GU","MP","PW","PR","VI"
 )
 
@@ -1234,10 +1235,10 @@ rm(fia_raw)
 # read in ex situ data we saved in 2-compile_exsitu_data.R (edit to match your 
 #   file names)
 exsitu_raw1 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
-  "ExSitu_Compiled_Post-Geolocation_2023-06-08.csv"), colClasses = "character",
+  "ExSitu_Compiled_Post-Geolocation_2023-06-19.csv"), colClasses = "character",
     na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
 exsitu_raw2 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
-  "ExSitu_Dead_2023-06-08.csv"), colClasses = "character",
+  "ExSitu_Dead_2023-06-19.csv"), colClasses = "character",
   na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
 exsitu_raw <- bind_rows(exsitu_raw1,exsitu_raw2)
 nrow(exsitu_raw)

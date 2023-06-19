@@ -167,9 +167,9 @@ syn_match # see note below about these
 taxon_list <- left_join(taxon_list, rl_add, 
                         by=c("taxon_name_accepted" = "taxon"))
 
-# add Not Applicable RL category for any hybrids
-taxon_list[which(grepl(" x ",taxon_list$taxon_name_accepted)),]$rl_category <- "Not Applicable"
-# add Not Evaluated for any taxa with no RL category
+# if needed, add Not Applicable RL category for any hybrids:
+#taxon_list[which(grepl(" x ",taxon_list$taxon_name_accepted)),]$rl_category <- "Not Applicable" }
+# add Not Evaluated for any taxa with no RL category:
 taxon_list[which(is.na(taxon_list$rl_category)),]$rl_category <- "Not Evaluated"
 
 # note that we don't automatically add the "syn_match" matches; for example, 
@@ -295,21 +295,15 @@ head(taxon_list)
 # see which accepted target taxa have no distribution data matched
 unique(taxon_list[is.na(taxon_list$gts_native_dist) &
            is.na(taxon_list$rl_native_dist),]$taxon_name_accepted)
-# you can add data for these manually if you'd like; for example:
+### you can add data for these manually if you'd like; for example:
 add_manually <- data.frame(
-  taxon_name_accepted = c("Asimina incana", "Asimina longifolia",
-                          "Asimina manasota", "Asimina pygmaea",
-                          "Asimina reticulata", "Asimina x nashii",
+  taxon_name_accepted = c("Asimina longifolia", "Asimina manasota", 
                           "Juglans major var. major",
                           "Juglans microcarpa var. microcarpa"),
   manual_native_dist = c("United States","United States",
-                         "United States","United States",
-                         "United States","United States",
                          "Mexico; United States",
                          "United States"),
   manual_native_dist_iso2 = c("US","US",
-                               "US","US",
-                               "US","US",
                                "MX; US",
                                "US"))
 taxon_list <- left_join(taxon_list,add_manually)

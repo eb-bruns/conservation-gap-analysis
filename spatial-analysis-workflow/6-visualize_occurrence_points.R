@@ -43,7 +43,7 @@
 ################################################################################
 
 # install rnaturalearthdata package if you don't have it yet
-install.packages('rnaturalearthdata')
+install.packages('rnaturalearthdata') # my version is 0.1.0
 
 # load packages
 my.packages <- c('tidyverse','textclean','terra','rnaturalearth','leaflet')

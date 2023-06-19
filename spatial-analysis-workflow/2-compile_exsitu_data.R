@@ -734,7 +734,7 @@ unique(all_data5[which(grepl(" x ",all_data5$taxon_full_name_orig) &
 all_data5 <- all_data5 %>%
   filter(!(grepl(" x ",all_data5$taxon_full_name_orig) &
            !grepl(" x ",all_data5$taxon_name_accepted)))
-nrow(all_data5) #310
+nrow(all_data5)
 
 # final part for removing duplicate data - from previous years or networks
 all_data6 <- all_data5
@@ -800,7 +800,7 @@ all_data7$prov_type <- str_to_lower(all_data7$prov_type)
 #   needs to be preserved but is in the wrong place
   # these are used in Genesys; try each and comment out if error is thrown...
 #all_data7[which(all_data7$prov_type=="130"|grepl("^130) ",all_data7$prov_type)),]$notes <- "Semi-natural/sown"
-all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
+#all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
 #all_data7[which(all_data7$prov_type=="300"|grepl("^300) ",all_data7$prov_type)),]$notes <- "Traditional cultivar/landrace"
 all_data7[which(all_data7$prov_type=="400"|grepl("^400) ",all_data7$prov_type)),]$notes <- "Breeding/research material"
 all_data7[which(all_data7$prov_type=="500"|grepl("^500) ",all_data7$prov_type)),]$notes <- "Advanced or improved cultivar (conventional breeding methods)"
@@ -1066,8 +1066,9 @@ nrow(on_land)
 land_id <- unique(on_land$temp_id)
 in_water <- have_coord %>% filter(!(temp_id %in% land_id))
 in_water <- as.data.frame(in_water)
-in_water$latlong_flag <- "Given lat-long is in the water"
-in_water$latlong_country <- ""
+if(nrow(in_water >0)){
+  in_water$latlong_flag <- "Given lat-long is in the water" 
+  in_water$latlong_country <- "" }
 nrow(in_water)
 # bind all the points back together
 all_data9 <- rbind(on_land,in_water,no_coord)
@@ -1494,12 +1495,12 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
 
 # read in all compiled ex situ data (exported above)
 exsitu <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "All_ExSitu_Compiled_2023-06-15.csv"), #change this to your version!
+  "All_ExSitu_Compiled_2023-06-19.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset
 geo_raw <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "ExSitu_Need_Geolocation_2023-06-08_Geolocated.csv"), #change this to your version!
+  "ExSitu_Need_Geolocation_2023-06-19_Geolocated.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 head(geo_raw)
   # check this is just NA, meaning no "priority" records are not geolocated

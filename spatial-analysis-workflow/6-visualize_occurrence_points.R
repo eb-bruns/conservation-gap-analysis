@@ -46,7 +46,7 @@
 install.packages('rnaturalearthdata') # my version is 0.1.0
 
 # load packages
-my.packages <- c('tidyverse','textclean','terra','rnaturalearth','leaflet')
+my.packages <- c('tidyverse','textclean','rnaturalearth','leaflet')
   # versions I used (in the order listed above): 2.0.0, 0.9.3, 1.7-29, 0.3.3, 2.1.2
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
@@ -102,11 +102,8 @@ taxa_cycle
 countries <- target_taxa$all_native_dist_iso2
 
 # read in world countries layer from rnaturalearth package
-world_polygons <- vect(ne_countries(scale = 50, type = "countries", 
-                                returnclass = "sf"))
-# make the terra object (SpatVector) in a simple feature object (leaflet 
-#   doesn't take SpatVector)
-world_polygons <- sf::st_as_sf(world_polygons)
+world_polygons <- ne_countries(scale = 50, type = "countries", 
+                                returnclass = "sf")
 
 ### cycle through each species file and create map
 for(i in 1:length(taxa_cycle)){
@@ -446,5 +443,5 @@ for(i in 1:length(taxa_cycle)){
                                                    standardized_occ,data_out,
     paste0(taxa_cycle[i], "__map-for-vetting.html"))))
 
-  cat("\tEnding ", taxa_cycle[i], ", ", i, " of ", length(taxa_cycle), ".\n\n", sep="")
+  cat("\tMapped ", taxa_cycle[i], ", ", i, " of ", length(taxa_cycle), ".\n\n", sep="")
 }

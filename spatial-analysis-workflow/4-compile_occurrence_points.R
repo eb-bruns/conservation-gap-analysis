@@ -62,6 +62,7 @@ my.packages <- c('tidyverse','textclean','CoordinateCleaner','terra','countrycod
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
 
+# be extra sure we are using dplyr when we mean to
 select <- dplyr::select
 filter <- dplyr::filter
 mutate <- dplyr::mutate
@@ -273,7 +274,7 @@ no_coord <- anti_join(all_data,have_coord)
   #   1-prep_gis_layers.R instead of the 10m layer
 pts_spatial <- terra::intersect(pts_spatial,world_ctry)
   # if the following two lines are not zero, you should look at script
-  #  1-prep_gis_layers.R and fill in an additional missing code
+  #  1-prep_gis_layers.R and fill in an additional missing code(s)
 nrow(pts_spatial[which(is.na(pts_spatial$iso_a2)),])
 nrow(pts_spatial[which(pts_spatial$iso_a2=="-99"),])
   # bring all the data back together and flag water points

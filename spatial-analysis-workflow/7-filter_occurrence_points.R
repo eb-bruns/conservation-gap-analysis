@@ -94,6 +94,9 @@ taxon_files <- list.files(path=file.path(main_dir,occ_dir,standardized_occ,data_
                           ignore.case=FALSE, full.names=FALSE, recursive=TRUE)
 target_taxa <- file_path_sans_ext(taxon_files)
 
+# start a table to add summary of results for each species
+summary_tbl <- data.frame(taxon_name_accepted = "start", final_pts = "start")
+
 # cycle through each target taxon to remove flagged points and save new version
 for (i in 1:length(target_taxa)){
   
@@ -186,12 +189,30 @@ for (i in 1:length(target_taxa)){
     
   ## write final occurrence point file
   write.csv(taxon_now, file.path(main_dir,occ_dir,standardized_occ,data_out,
-                                 paste0(taxon_file,"__",Sys.Date(),".csv")), 
+                                 paste0(taxon_file,".csv")), 
             row.names=FALSE)
+  
+  # add data to summary table
+  summary_add <- data.frame(
+    taxon_name_accepted = taxon_nm,
+    final_pts = nrow(taxon_now))
+  summary_tbl[i,] <- summary_add
   
   ## cat update
   cat("Original points: ", orig_num_pts, "\n", sep="")
   cat("Final points: ", nrow(taxon_now), "\n\n", sep="")
 
 }
+
+# add summary of points to summary we created in 5-compile_occurrence_points.R
+file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
+                      pattern = "summary_of_occurrences", full.names = T)
+orig_summary <- read.csv(file_nm, colClasses = "character")
+summary_tbl2 <- full_join(orig_summary,summary_tbl,by="taxon_name_accepted")
+summary_tbl2
+
+# write summary table
+write.csv(summary_tbl2, file.path(main_dir,occ_dir,standardized_occ,
+                                  paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)
+
 

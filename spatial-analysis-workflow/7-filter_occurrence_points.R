@@ -27,20 +27,20 @@
   #         flagging filter you're using. The UID for a point can be found by 
   #         clicking on the point in its interactive map (created in 
   #         6-visualize_occurrence_points.R). Multiple UIDs to remove are 
-  #         separated by a semicolon followed by a space.
+  #         separated by a semicolon.
   #     3. remove_bounding_box ~ Coordinates for bounding box(es) where all 
   #         points inside will be removed.Format for the bounding box is:
   #         top-left_lat, top-left_long, bottom-right_lat, bottom-right_long
   #         In other words, coordinates of the top-left corner followed by 
   #         coordinates of the bottom-right corner of the bounding box. Multiple
-  #         bounding boxes are separated by a semicolon followed by a space. 
-  #         Note that your bounding box cannot cross the 180/-180 line (near the
-  #         international date line); should very rarely be a concern.
+  #         bounding boxes are separated by a semicolon. Note that your 
+  #         bounding box cannot cross the 180/-180 line (near the international 
+  #         date line); should very rarely be a concern.
   #     4. keep_id ~ UID of point(s) to keep, which would otherwise be removed 
   #         by a flagging filter you're using. The UID for a point can be found  
   #         by clicking on the point in its interactive map (created in 
   #         6-visualize_occurrence_points.R). Multiple UIDs to keep are 
-  #         separated by a semicolon followed by a space.
+  #         separated by a semicolon.
   
 ### OUTPUTS:
   ## final_taxon_points (folder)
@@ -84,6 +84,10 @@ data_in <- "taxon_points_ready-to-vet"
 manual_edits <- read.csv(file.path(main_dir,occ_dir,standardized_occ,
                                "manual_point_edits.csv"),
                        header=T, colClasses="character", na.strings=c("","NA"))
+# remove all spaces in the manual edits, to standardize in case manual mistakes
+manual_edits <- manual_edits %>%
+  mutate(across(remove_id:remove_bounding_box, ~
+                  str_remove_all(.x, pattern = fixed(" "))))
 
 # list of taxon files to iterate through
 taxon_files <- list.files(path=file.path(main_dir,occ_dir,standardized_occ,data_in), 
@@ -141,7 +145,7 @@ for (i in 1:length(target_taxa)){
           establishmentMeans != "INVASIVE" &
           establishmentMeans != "CULTIVATED"
         ))
-  print(paste0("--Removed ",nrow(taxon_now)," points based on flagging colums"))
+  cat(paste0("--Removed ",orig_num_pts-nrow(taxon_now)," points based on flagging colums\n"))
   
   ## check document with manual point edits to see if anything needs to be
   ##    removed or added back in
@@ -150,15 +154,15 @@ for (i in 1:length(target_taxa)){
     manual_edits$taxon_name_accepted == taxon_nm),]
   # remove if ID listed in remove_id
   if(!is.na(taxon_edits$remove_id)){
-    remove <- unlist(strsplit(taxon_edits$remove_id,"; "))
+    remove <- unlist(strsplit(taxon_edits$remove_id,";"))
     taxon_now <- taxon_now %>% filter(!(UID %in% remove))
-    print(paste0("--Removed ",length(remove)," points based on IDs to remove"))
+    cat(paste0("--Removed ",length(remove)," points based on IDs to remove\n"))
   }
   # remove if inside remove_bounding_box
   if(!is.na(taxon_edits$remove_bounding_box)){
-    boxes <- unlist(strsplit(taxon_edits$remove_bounding_box,"; "))
+    boxes <- unlist(strsplit(taxon_edits$remove_bounding_box,";"))
     for(j in 1:length(boxes)){
-      bounds <- unlist(strsplit(boxes[j],", "))
+      bounds <- unlist(strsplit(boxes[j],","))
       # note that if your bounding box crosses longitude 180/-180, which is near
       #   the international date line, then the longitude comparison here won't 
       #   work! - the filter would need to be edited a little to catch that exceptoin
@@ -169,15 +173,15 @@ for (i in 1:length(target_taxa)){
                decimalLongitude < as.numeric(bounds[4]))
       taxon_now <- taxon_now %>%
         filter(!(UID %in% unique(remove$UID)))
-      print(paste0("--Removed ",nrow(remove)," points based on bounding box ", j))
+      cat(paste0("--Removed ",nrow(remove)," points based on bounding box ", j,"\n"))
     }
   }
   # add back if ID listed in keep_id
   if(!is.na(taxon_edits$keep)){
-    keep <- unlist(strsplit(taxon_edits$keep,"; "))
+    keep <- unlist(strsplit(taxon_edits$keep,";"))
     add <- taxon_now %>% filter(UID %in% keep)
     taxon_now <- suppressMessages(full_join(taxon_now,add))
-    print(paste0("--Added back ",length(keep)," points based on IDs to keep"))
+    cat(paste0("--Added back ",length(keep)," points based on IDs to keep\n"))
   }
     
   ## write final occurrence point file
@@ -185,9 +189,9 @@ for (i in 1:length(target_taxa)){
                                  paste0(taxon_file,"__",Sys.Date(),".csv")), 
             row.names=FALSE)
   
-  ## print update
-  cat("Original num points: ", orig_num_pts, "\n", sep="")
-  cat("Final num points: ", nrow(taxon_now), "\n\n", sep="")
+  ## cat update
+  cat("Original points: ", orig_num_pts, "\n", sep="")
+  cat("Final points: ", nrow(taxon_now), "\n\n", sep="")
 
 }
 

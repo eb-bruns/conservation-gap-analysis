@@ -292,8 +292,6 @@ orig_summary <- read.csv(file_nm, colClasses = "character")
 summary_tbl2 <- full_join(orig_summary,summary_tbl,by="taxon_name_accepted")
 summary_tbl2
 
-# save manual_point_edits.csv file 
-
 # write summary table
 write.csv(summary_tbl2, file.path(main_dir,occ_dir,standardized_occ,
   paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)

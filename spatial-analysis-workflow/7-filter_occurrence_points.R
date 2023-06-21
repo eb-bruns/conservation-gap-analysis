@@ -116,18 +116,8 @@ for (i in 1:length(target_taxa)){
   taxon_now <- read.csv(file.path(main_dir,occ_dir,standardized_occ,data_in,
                                   paste0(taxon_file, ".csv")))
   orig_num_pts <- nrow(taxon_now)
-  
-  ## first make sure all the T/F columns are logical type
-  taxon_now <- taxon_now %>%
-    mutate(.cen = as.logical(.cen),
-           .urb = as.logical(.urb),
-           .inst = as.logical(.inst),
-           .con = as.logical(.con),
-           .outl = as.logical(.outl),
-           .nativectry = as.logical(.nativectry),
-           .yr1950 = as.logical(.yr1950),
-           .yr1980 = as.logical(.yr1980),
-           .yrna = as.logical(.yrna))
+  # make sure all the T/F columns are logical type
+  taxon_now <- taxon_now %>% mutate(across(.cen:.yrna, as.logical))
   
   ## filter occurrence data based on filter columns created in 5-flag_occurrence_points.R
   taxon_now <- taxon_now %>%
@@ -174,7 +164,7 @@ for (i in 1:length(target_taxa)){
       bounds <- unlist(strsplit(boxes[j],","))
       # note that if your bounding box crosses longitude 180/-180, which is near
       #   the international date line, then the longitude comparison here won't 
-      #   work! - the filter would need to be edited a little to catch that exceptoin
+      #   work! - the filter would need to be edited to catch that exception
       remove <- taxon_now %>%
         filter(decimalLatitude < as.numeric(bounds[1]) & 
                decimalLongitude > as.numeric(bounds[2]) &

@@ -90,7 +90,7 @@ nrow(target_taxa)
 
 # save file that can be (optionally) used for manually flagging points for removal
 edits <- data.frame(taxon_name_accepted = target_taxa$taxon_name_accepted,
-                    remove_id	= "", keep_id	= "", remove_bounding_box = "",
+                    remove_id	= "", remove_bounding_box = "", keep_id	= "", 
                     reviewer_notes	= "", reviewer_name = "")
 if(file.exists(file.path(main_dir,occ_dir,standardized_occ,"manual_point_edits.csv"))){
   "You've already created this file; if you'd like to overwrite it, run the 'else' statement manually"

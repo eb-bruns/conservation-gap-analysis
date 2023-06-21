@@ -14,8 +14,15 @@
 ### DESCRIPTION:
   ## This script creates an interactive (HTML) occurrence point map for each 
   #   target taxon, for exploring and (optionally) retrieving the UIDs of points 
-  #   to be removed before final anlayses. Includes toggles that show points 
-  #   flagged in 5-flag_occurrence_points.R
+  #   to be removed before final anlayses. Includes checkbox toggles that show 
+  #   points flagged in 5-flag_occurrence_points.R, plus some additional flags.
+  ## Note that you can add additional flagging checkboxes to the map by adding
+  #   additional 'addCircleMarkers' sections; for example, copy line 316-336 
+  #   and edit the 'filter' arguments (second line) and the 'group' text 
+  #   (last line) then go to 'overlayGroups' (line 424) and add an entry for 
+  #   the group you just created. You can of course remove checkboxes by doing
+  #   the opposite (remove the addCircleMarkers section and the corresponding  
+  #   overlayGroups entry).
 
 ### INPUTS:
   ## target_taxa_with_synonyms.csv
@@ -115,8 +122,8 @@ for(i in 1:length(taxa_cycle)){
   ## create a color palette for the map's points, based on source database
     # set database as factor and order as you'd like for viewing overlapping
     #   points; earlier databases will be shown on top of latter databases
-  database_order <- c("Ex_situ","GBIF","NorthAm_herbaria","iDigBio",
-                      "IUCN_RedList","FIA","BIEN")
+  database_order <- c("Ex_situ","NorthAm_herbaria","iDigBio","GBIF","FIA",
+                      "IUCN_RedList","BIEN")
   taxon_now$database <- factor(taxon_now$database, levels = database_order)
   taxon_now <- taxon_now %>% arrange(desc(database))
     # create color palette (one color for each database)

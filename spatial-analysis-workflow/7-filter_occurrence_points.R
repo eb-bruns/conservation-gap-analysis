@@ -14,6 +14,12 @@
   #   columns (added in 5-flag_occurrence_points.R) you choose to use, and any
   #   manual edits provided through the manual_point_edits.R file (see INPUTS
   #   below for details).
+  ## Note that currently the same flagging columns are used for every target 
+  #   taxon; this makes it easier from a methods standpoint. But, if you want
+  #   to use different flagging columns for different taxa, the script could
+  #   be edited to do so. One option for this would be adding a column to the 
+  #   manual_point_edits.csv that lists the filters you want to use... not a
+  #   super simple or quick solution though.
 
 ### INPUTS:
   ## taxon_points_ready-to-vet (folder) 

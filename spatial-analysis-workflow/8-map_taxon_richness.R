@@ -181,7 +181,7 @@ ctry_richness_all <- richness.countries(taxon_list,world_polygons)
 ## title text for map
 my_title <- "Example taxon richness map"
 ## text for legend title
-my_legend_title <- paste0("Number of","<br/>","native taxa")
+my_legend_title <- paste0("Number of native","<br/>"," target taxa")
 ## color bins and labels
   # can look at distribution of data to inform bins
 hist(ctry_richness_all$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
@@ -218,7 +218,7 @@ if(nrow(threatened_taxa)>0){
   # reference comments in first section as needed; removed here since the same process
   ctry_richness_threatened <- richness.countries(threatened_taxa,world_polygons)
   my_title <- "Example taxon richness map"
-  my_legend_title <- paste0("Number of threatened","<br/>","native taxa")
+  my_legend_title <- paste0("Number of native,","<br/>","threatened target taxa")
   hist(ctry_richness_threatened$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
   bins <- c(1,2,3,4,5,10,15,Inf)
   my_legend_labels <- c("1","2","3","4","5-9","10-14","15+")
@@ -245,7 +245,7 @@ if(nrow(endemic_taxa)>0){
   # reference comments in first section as needed; removed here since the same process
   ctry_richness_endemic <- richness.countries(endemic_taxa,world_polygons)
   my_title <- "Example taxon richness map"
-  my_legend_title <- paste0("Number of endemic","<br/>","native taxa")
+  my_legend_title <- paste0("Number of endemic","<br/>","target taxa")
   hist(ctry_richness_endemic$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
   bins <- c(1,2,3,4,5,6,7,8,9,Inf)
   my_legend_labels <- c("1","2","3","4","5","6","7","8","9+")
@@ -315,15 +315,15 @@ map_input <- data.frame(
   my_title = c("Example taxon richness map for the US",
                "Example taxon richness map for Canada",
                "Example taxon richness map for Mexico"),
-  my_legend_title = c(paste0("Number of","<br/>","native taxa"),
-                      paste0("Number of","<br/>","native taxa"),
-                      paste0("Number of","<br/>","native taxa")),
-  my_bins <- c("0,1,2,3,4,5,6,7,Inf",
+  my_legend_title = c(paste0("Number of native","<br/>"," target taxa"),
+                      paste0("Number of native","<br/>"," target taxa"),
+                      paste0("Number of native","<br/>"," target taxa")),
+  my_bins <- c("0,1,2,3,4,5",
                "0,1,2,3,4,5,6,7,Inf",
-               "0,1,2,3,4,5,6,7,Inf"),
-  my_legend_labels <- c('"0",1","2","3","4","5","6","7+"',
+               "0,1,2"),
+  my_legend_labels <- c('"0",1","2","3","4","5"',
                         '"0",1","2","3","4","5","6","7+"',
-                        '"0",1","2","3","4","5","6","7+"')
+                        '"0",1","2"')
 )
 
 ## loop through each country to read in a shapefile, calculate richness, and map
@@ -350,6 +350,9 @@ for(i in 1:nrow(map_input)){
   state_richness <- st_join(state_polygons,state_richness_df)
   # replace NA values with 0
   state_richness$Freq[is.na(state_richness$Freq)] <- 0
+  
+  cat(paste0("--Number of taxa in states/provinces in ",map_input$country[i],": "))
+  cat(sort(unique(state_richness$Freq)),"\n")
   
   # create palette for map; we'll use the same for every country
   my_palette <- colorBin(palette = "Greens", 

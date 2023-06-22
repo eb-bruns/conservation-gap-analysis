@@ -108,7 +108,7 @@ summary_tbl <- data.frame(
   .yrna = "start", 
     stringsAsFactors=F)
 
-# select columns and order
+# select columns and the order you want them in
   col_names <- c( 
     #data source and unique ID
     "UID","database","all_source_databases",
@@ -237,7 +237,7 @@ for (i in 1:length(target_taxa)){
   # set column order and remove a few unnecessary columns
   taxon_now <- taxon_now %>% dplyr::select(all_of(col_names))
   
-  # subset of completely unflagged points
+  # count of completely unflagged points
   total_unflagged <- taxon_now %>%
     filter(.cen & .urb & .inst & .con & .outl & .yr1950 & .yr1980 & .yrna &
              (.nativectry | is.na(.nativectry)) &
@@ -248,17 +248,26 @@ for (i in 1:length(target_taxa)){
              establishmentMeans != "CULTIVATED"
     )
   
-  # OPTIONAL subset of unflagged points based on selected filters you'd like 
-  #   to use; change as desired; commented out lines are those we aren't using
+  # OPTIONAL count of unflagged points based on selected filters you'd like 
+  #   to use, to see how many points there are; change as desired; commented- 
+  #   out lines are the filters we don't want to use
   select_unflagged <- taxon_now %>%
-    filter(.cen & .inst & .outl & 
-             #.urb & .con & .yr1950 & .yr1980 & .yrna &
-             (.nativectry | is.na(.nativectry)) &
-             basisOfRecord != "FOSSIL_SPECIMEN" & 
-             basisOfRecord != "LIVING_SPECIMEN" &
-             establishmentMeans != "INTRODUCED" & 
-             establishmentMeans != "MANAGED" &
-             establishmentMeans != "CULTIVATED"
+    filter(
+            .cen & 
+            .inst & 
+            .outl &
+            .con & 
+            #.urb & 
+            .yr1950 & 
+            #.yr1980 & 
+            #.yrna &
+            (.nativectry | is.na(.nativectry)) &
+            basisOfRecord != "FOSSIL_SPECIMEN" &
+            basisOfRecord != "LIVING_SPECIMEN" &
+            establishmentMeans != "INTRODUCED" &
+            establishmentMeans != "MANAGED" &
+            establishmentMeans != "INVASIVE" &
+            establishmentMeans != "CULTIVATED"
     )
   
   # add data to summary table

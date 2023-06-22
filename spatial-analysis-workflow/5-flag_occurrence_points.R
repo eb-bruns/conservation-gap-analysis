@@ -108,39 +108,8 @@ summary_tbl <- data.frame(
   .yrna = "start", 
     stringsAsFactors=F)
 
-# select columns and the order you want them in
-  col_names <- c( 
-    #data source and unique ID
-    "UID","database","all_source_databases",
-    #taxon
-    "taxon_name_accepted","taxon_name_status",
-    "taxon_name","scientificName","genus","specificEpithet",
-    "taxonRank","infraspecificEpithet","taxonIdentificationNotes",
-    #event
-    "year","basisOfRecord",
-    #record-level
-    "nativeDatabaseID","institutionCode","datasetName","publisher",
-    "rightsHolder","license","references","informationWithheld",
-    "issue","recordedBy",
-    #occurrence
-    "establishmentMeans","individualCount",
-    #location
-    "decimalLatitude","decimalLongitude",
-    "coordinateUncertaintyInMeters","geolocationNotes",
-    "localityDescription","locality","verbatimLocality",
-    "locationNotes","municipality","higherGeography","county",
-    "stateProvince","country","countryCode","countryCode_standard",
-    "latlong_countryCode",
-    #additional optional data from target taxa list
-    "rl_category","ns_rank",
-    #flag columns
-    ".cen",".urb",".inst",".con",".outl",
-    ".nativectry",
-    ".yr1950",".yr1980",".yrna"
-  )
 
-## iterate through each species file to flag suspect points
-cat("Starting ","target ","taxa (", length(target_taxa)," total)",".\n\n",sep="")
+## iterate through each species file to flag suspect points...
 
 for (i in 1:length(target_taxa)){
 
@@ -151,10 +120,71 @@ for (i in 1:length(target_taxa)){
   # bring in records
   taxon_now <- read.csv(file.path(main_dir,occ_dir,standardized_occ,data_in,
     paste0(taxon_file, ".csv")))
+  # print the taxon name we're working with
+  cat("-----\n","Starting ", taxon_nm, ", taxon ", i, " of ", length(target_taxa), ".\n", sep="")
   
   
   # now we will go through a set of tests to flag potentially suspect records...
 
+  
+  ### FLAG RECORDS THAT HAVE COORDINATES NEAR COUNTRY AND STATE/PROVINCE CENTROIDS
+  flag_cen <- CoordinateCleaner::cc_cen(
+    taxon_now,
+    lon = "decimalLongitude", lat = "decimalLatitude",
+    # buffer = radius around country/state centroids (meters); default=1000
+    buffer = 500, value = "flagged")
+  taxon_now$.cen <- flag_cen
+  
+  
+  ## FLAG RECORDS THAT HAVE COORDINATES IN URBAN AREAS
+  if(nrow(taxon_now)<2){
+    taxon_now$.urb <- NA
+    print("Taxa with fewer than 2 records will not be tested.")
+  } else {
+    taxon_now <- as.data.frame(taxon_now)
+    flag_urb <- CoordinateCleaner::cc_urb(
+      taxon_now,
+      lon = "decimalLongitude",lat = "decimalLatitude",
+      ref = urban_areas, value = "flagged")
+    taxon_now$.urb <- flag_urb
+  }
+  
+  
+  ### FLAG RECORDS THAT HAVE COORDINATES NEAR BIODIVERSITY INSTITUTIONS
+  flag_inst <- CoordinateCleaner::cc_inst(
+    taxon_now,
+    lon = "decimalLongitude", lat = "decimalLatitude",
+    # buffer = radius around biodiversity institutions (meters); default=100
+    buffer = 100, value = "flagged")
+  taxon_now$.inst <- flag_inst
+  
+  
+  ### COMPARE THE COUNTRY LISTED IN THE RECORD VS. THE LAT-LONG COUNTRY; flag
+  #   when there is a mismatch; CoordinateCleaner package has something like 
+  #   this but also flags when the record doesn't have a country..didn't love that
+  taxon_now <- taxon_now %>% mutate(.con=(ifelse(
+    (as.character(latlong_countryCode) == as.character(countryCode_standard) &
+       !is.na(latlong_countryCode) & !is.na(countryCode_standard)) |
+      is.na(latlong_countryCode) | is.na(countryCode_standard), TRUE, FALSE)))
+  cat("Testing country listed\n",sep="")
+  cat("Flagged ",length(taxon_now$.con[FALSE])," records.\n",sep="")
+  
+  
+  ### FLAG SPATIAL OUTLIERS
+  taxon_now <- as.data.frame(taxon_now)
+  flag_outl <- CoordinateCleaner::cc_outl(
+    taxon_now,
+    lon = "decimalLongitude",lat = "decimalLatitude",
+    species = "taxon_name_accepted", 
+    # read more about options for the method and the multiplier:
+    #   https://www.rdocumentation.org/packages/CoordinateCleaner/versions/2.0-20/topics/cc_outl
+    # if you make the multiplier larger, it will flag less points.
+    # the default is 5; you may need to experiment a little to see what works
+    #   best for most of your target taxa (script #6 helps you view flagged pts)
+    method = "quantile", mltpl = 7, 
+    value = "flagged")
+  taxon_now$.outl <- flag_outl
+  
   
   ### CHECK LAT-LONG COUNTRY AGAINST "ACCEPTED" NATIVE COUNTRY DISTRUBUTION; 
   #   flag when the lat-long country is not in the list of native countries;
@@ -169,74 +199,32 @@ for (i in 1:length(target_taxa)){
   } else {
     taxon_now$.nativectry <- NA
   }
+  cat("Testing native countries\n",sep="")
+  cat("Flagged ",length(taxon_now$.nativectry[FALSE])," records.\n",sep="")
 
   
-  ### COMPARE THE COUNTRY LISTED IN THE RECORD VS. THE LAT-LONG COUNTRY; flag
-  #   when there is a mismatch; CoordinateCleaner package has something like 
-  #   this but also flags when the record doesn't have a country..didn't love that
-  taxon_now <- taxon_now %>% mutate(.con=(ifelse(
-    (as.character(latlong_countryCode) == as.character(countryCode_standard) &
-       !is.na(latlong_countryCode) & !is.na(countryCode_standard)) |
-      is.na(latlong_countryCode) | is.na(countryCode_standard), TRUE, FALSE)))
-  
-  
   ### FLAG OLDER RECORDS, based on two different year cutoffs (1950 & 1980)
+    # 1950 cutoff
   taxon_now <- taxon_now %>% mutate(.yr1950=(ifelse(
     (as.numeric(year)>1950 | is.na(year)), TRUE, FALSE)))
+  cat("Testing year < 1950\n",sep="")
+  cat("Flagged ",length(taxon_now$.yr1980[FALSE])," records.\n",sep="")
+    # 1980 cutoff
   taxon_now <- taxon_now %>% mutate(.yr1980=(ifelse(
     (as.numeric(year)>1980 | is.na(year)), TRUE, FALSE)))
+  cat("Testing year < 1980\n",sep="")
+  cat("Flagged ",length(taxon_now$.yr1980[FALSE])," records.\n",sep="")
   
   
   ### FLAG RECORDS THAT DON'T HAVE A YEAR PROVIDED
   taxon_now <- taxon_now %>% mutate(.yrna=(ifelse(
     !is.na(year), TRUE, FALSE)))
+  cat("Testing year NA\n",sep="")
+  cat("Flagged ",length(taxon_now$.yrna[FALSE])," records.\n\n",sep="")
   
   
-  ### FLAG RECORDS THAT HAVE COORDINATES NEAR BIODIVERSITY INSTITUTIONS AND/OR
-  ###   COUNTRY AND STATE/PROVINCE CENTROIDS
-  taxon_now <- CoordinateCleaner::clean_coordinates(taxon_now,
-    lon = "decimalLongitude", lat = "decimalLatitude",
-    species = "taxon_name_accepted",
-    # radius around country/state centroids (meters); default=1000
-    centroids_rad = 500, 
-    # radius around biodiversity institutions (meters)
-    inst_rad = 100, 
-    tests = c("centroids","institutions"))
-  
-  
-  ## FLAG RECORDS THAT HAVE COORDINATES IN URBAN AREAS
-  if(nrow(taxon_now)<2){
-    taxon_now$.urb <- NA
-    print("Taxa with fewer than 2 records will not be tested.")
-  } else {
-    taxon_now <- as.data.frame(taxon_now)
-    flag_urb <- CoordinateCleaner::cc_urb(taxon_now,
-      lon = "decimalLongitude",lat = "decimalLatitude",
-      ref = urban_areas, value = "flagged")
-    taxon_now$.urb <- flag_urb
-  }
-  
-  
-  ### FLAG SPATIAL OUTLIERS
-  taxon_now <- as.data.frame(taxon_now)
-  flag_outl <- CoordinateCleaner::cc_outl(taxon_now,
-    lon = "decimalLongitude",lat = "decimalLatitude",
-    species = "taxon_name_accepted", 
-    # read more about options for the method and the multiplier:
-    #   https://www.rdocumentation.org/packages/CoordinateCleaner/versions/2.0-20/topics/cc_outl
-    # if you make the multiplier larger, it will flag less points.
-    # the default is 5; you may need to experiment a little to see what works
-    #   best for most of your target taxa (script #6 helps you view flagged pts)
-    method = "quantile", mltpl = 7, 
-    value = "flagged")
-  taxon_now$.outl <- flag_outl
+  # create some subsets to count how many records are in each, for summary table...
 
-  
-  # set everything up for saving...
-
-  # set column order and remove a few unnecessary columns
-  taxon_now <- taxon_now %>% dplyr::select(all_of(col_names))
-  
   # count of completely unflagged points
   total_unflagged <- taxon_now %>%
     filter(.cen & .urb & .inst & .con & .outl & .yr1950 & .yr1980 & .yrna &
@@ -291,7 +279,6 @@ for (i in 1:length(target_taxa)){
   write.csv(taxon_now, file.path(main_dir,occ_dir,standardized_occ,data_out,
     paste0(taxon_file, ".csv")), row.names=FALSE)
 
-  cat("Ending ", taxon_nm, ", ", i, " of ", length(target_taxa), ".\n\n", sep="")
 }
 
 # add summary of points to summary we created in 4-compile_occurrence_points.R

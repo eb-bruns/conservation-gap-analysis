@@ -49,9 +49,9 @@
   #         separated by a semicolon.
   
 ### OUTPUTS:
-  ## final_taxon_points (folder)
+  ## taxon_points_final (folder)
   #   For each taxon in your target taxa list, a CSV of filtered occurrence 
-  #   records (e.g., Asimina_triloba__YYYY_MM_DD.csv)
+  #   records (e.g., Asimina_triloba.csv)
 
 ################################################################################
 # Load libraries

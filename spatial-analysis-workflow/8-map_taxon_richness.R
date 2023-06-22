@@ -25,7 +25,7 @@
   #   (taxon_points_final folder) to determine the number of taxa in each state;
   #   but you could also use occurrence points in a different format and edit 
   #   the code a little.
-  ## geopolitical boundaries shapefile(s)
+  ## (optional) geopolitical boundaries shapefile(s)
   #   Currently this script use country and state features from the rnaturalearth 
   #   package. But, if you would like to use other boundaries, you'll need to 
   #   have them as inputs.

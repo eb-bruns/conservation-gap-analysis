@@ -3,11 +3,12 @@
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
 #   Missouri Botanical Garden, UC Davis Arboretum & Botanic Garden
-### Funding: Base script funded by the Institute of Museum and Library 
-#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-#   Moderate edits were added with funding from a cooperative agreement
-#   between the United States Botanic Garden and San Diego Botanic Garden
-#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
+#   -- United States Botanic Garden (cooperative agreement with San Diego
+#        Botanic Garden)
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written Dec 2020
 ### R version 4.3.0
 

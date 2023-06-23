@@ -2,8 +2,9 @@
 ### Authors: Shannon M Still & Emily Beckman Bruns
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, UC Davis Arboretum & Botanic Garden
-### Funding: Institute of Museum and Library Services
-#   (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum)
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written Dec 2020
 ### R version 4.3.0
 
@@ -23,6 +24,7 @@
 #   blank "________" (line 38)
 Sys.info()[4]
 
+
 ## For Emily Bruns:
 if (Sys.info()[4] == "Africa.local") {
   # I like my main directory in Google Drive for easy sharing; to do this, 
@@ -33,7 +35,8 @@ if (Sys.info()[4] == "Africa.local") {
   log_loc <- "/Users/emily/Documents/gap-analysis_passwords.txt"
   gap_dir <- "/Users/emily/Documents/GitHub/GapAnalysis_EBB/R"
   print(paste("Working from the lovely", Sys.info()[4]))
-
+  
+  
 ## For additional user or workstation (fill in each ________ with your file path)
 } else if (Sys.info()[4] == "________") {
   # main working directory (folder where you want most files to be)
@@ -51,6 +54,7 @@ if (Sys.info()[4] == "Africa.local") {
   gap_dir <- "________"
   # print computer name, to let you know you're in the right spot
   print(paste("Working from the lovely", Sys.info()[4]))
+  
   
 ## can add as many additional "else if" sections as needed for other workstations
 

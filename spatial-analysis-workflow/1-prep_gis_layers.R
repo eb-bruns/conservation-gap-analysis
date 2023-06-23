@@ -1,7 +1,8 @@
 ### 1-prep_gis_layers.R
 ### Author: Emily Beckman Bruns
 ### Supporting institutions: The Morton Arboretum
-### Funding: NSF ABI grant #1759759
+### Funding:
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023
 ### R version 4.3.0
 

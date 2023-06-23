@@ -1,9 +1,10 @@
 ### 8-map_taxon_richness.R
-### Author: Emily Beckman Bruns
+### Author: Emily Beckman Bruns & Kate Good
 ### Supporting institutions: The Morton Arboretum
-### Funding: Institute of Museum and Library Services 
-#   (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum), and 
-#   NSF ABI grant #1759759
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written August 2022
 ### R version 4.3.0
 
@@ -49,7 +50,7 @@
 # load packages
 my.packages <- c('tidyverse','sf','RColorBrewer','leaflet','rnaturalearth',
                  'countrycode')
-  # versions I used (in the order listed above): 2.0.0 ..................
+  # versions I used (in the order listed above): 2.0.0, 1.0-13, 1.1-3, 2.1.2, 0.3.3, 1.5.0
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)

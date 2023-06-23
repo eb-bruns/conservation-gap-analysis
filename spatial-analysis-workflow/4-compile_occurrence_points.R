@@ -3,11 +3,12 @@
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
 #   Missouri Botanical Garden, UC Davis Arboretum & Botanic Garden
-### Funding: Base script funded by the Institute of Museum and Library 
-#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-#   Moderate edits were added with funding from a cooperative agreement
-#   between the United States Botanic Garden and San Diego Botanic Garden
-#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
+#   -- United States Botanic Garden (cooperative agreement with San Diego
+#        Botanic Garden)
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written Feb 2020
 ### R version 4.3.0
 
@@ -41,10 +42,14 @@
   ## all_occurrence_data_raw_YYYY_MM_DD.csv
   #   All occurrence data compiled, before removing any records; this is used
   #   in the GapAnalysis package
-  ## need_geolocation_YYYY_MM_DD.csv
+  ## could_attempt_geolocation_YYYY_MM_DD.csv
   #   All occurrence records without valid lat-long but with locality 
   #   description; these could be manually geolocated if desired, but usually
   #   that is only needed if you have a rare species without enough records
+  ## removed_water_points_YYYY_MM_DD.csv
+  #   Points that fall outside the country boundary features (in the water), and
+  #   are therefore removed. Sometimes these are very close to land and the
+  #   coordinates can be edited, as desired, to move them to land
   ## summary_of_occurrences_YYYY_MM_DD.csv
   #   Summary table with one row for each target taxon, listing the number of 
   #   records with valid lat-long and number with locality description only
@@ -256,6 +261,9 @@ rm(coord_test)
 
 # we clip the occurrence points to the countries layer since some analyses rely
 #   on knowing which country (or sometimes state) the point falls within
+# IMPROVEMENT OPPORTUNITY: a buffer could be added to the countries layer, to 
+#   catch points that are just outside the feature boundary but still could
+#   be on land, since the features can't be so exact (too large)
 
 # read in world countries layer created in 1-prep_gis_layers.R
 world_ctry <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
@@ -302,16 +310,26 @@ write.csv(all_data2, file.path(main_dir,occ_dir,standardized_occ,
 
 # separate out points with locality description but no valid lat-long
 table(all_data2$flag)
-locality_pts <- all_data2 %>% 
-  filter(!is.na(localityDescription) & !is.na(flag))
+locality_pts <- all_data2 %>% filter(!is.na(localityDescription) & 
+                                     flag == "Coordinates invalid")
 nrow(locality_pts)
   # save the file, for reference; you can geolocate these records if you want, 
   #   but usually only necessary for rare taxa without enough lat-long records
 write.csv(locality_pts, file.path(main_dir,occ_dir,standardized_occ,
-  paste0("need_geolocation_", Sys.Date(), ".csv")),
-  row.names = F)
+                                  paste0("could_attempt_geolocation_", 
+                                         Sys.Date(), ".csv")), row.names = F)
 
-# create final subset that is only points with valid lat-long on land
+# separate out points that will be removed because they're in the water; can
+#   reference this, and potentially move points to the land if desired
+water_pts <- all_data2 %>% filter(flag == "Not on land")
+nrow(water_pts)
+# save the file, for reference; you can geolocate these records if you want, 
+#   but usually only necessary for rare taxa without enough lat-long records
+write.csv(water_pts, file.path(main_dir,occ_dir,standardized_occ,
+                               paste0("removed_water_points_", Sys.Date(), ".csv")),
+          row.names = F)
+
+### create final subset that is only points with valid lat-long on land
 geo_pts <- all_data2 %>% filter(is.na(flag))
 nrow(geo_pts)
   # see how many points are from each database
@@ -503,11 +521,16 @@ names(count_geo)[2] <- "num_latlong_records"
   # count records with invalid lat-long but have locality description
 count_locality <- locality_pts %>% count(taxon_name_accepted)
 names(count_locality)[2] <- "num_locality_records"
+  # count records that fell outside country feature boundaries
+count_water<- water_pts %>% count(taxon_name_accepted)
+names(count_water)[2] <- "num_water_records"
   # make table
-files <- list(count_geo,count_locality,
+pieces <- list(count_geo,count_locality,count_water,
               data.frame(taxon_name_accepted=unique(taxon_list$taxon_name_accepted)))
-summary <- Reduce(full_join, files)
-summary <- summary %>% arrange(!is.na(num_latlong_records), num_latlong_records)
+summary <- Reduce(full_join, pieces)
+summary <- summary %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>%
+  arrange(!is.na(num_latlong_records), num_latlong_records)
 head(as.data.frame(summary))
   # write file
 write.csv(summary, file.path(main_dir,occ_dir,standardized_occ,

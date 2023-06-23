@@ -3,11 +3,12 @@
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
 #   Missouri Botanical Garden, UC Davis Arboretum & Botanic Garden
-### Funding: Base script funded by the Institute of Museum and Library 
-#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-#   Moderate edits were added with funding from a cooperative agreement
-#   between the United States Botanic Garden and San Diego Botanic Garden
-#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
+#   -- United States Botanic Garden (cooperative agreement with San Diego
+#        Botanic Garden)
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written Feb 2020
 ### R version 4.3.0
 
@@ -21,6 +22,12 @@
   #   addressing issues common in biological collection databases."
   #   See the article here:
   #   https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13152
+  ## NOTE THAT THE CoordinateCleaner PACKAGE CURRENT VERSION (2.0-20) DEPENDS ON
+  ## rgeos and rgdal, WHICH WILL RETIRE SHORTLY! If the package does not release
+  ## an update that removes these dependencies, the functions in this script 
+  ## that use CoordinateCleaner will need to be replaced manually or skipped; 
+  ## but, it looks like they are working on removing dependencies:
+  ## https://github.com/ropensci/CoordinateCleaner/issues/78
 
 ### INPUTS:
   ## target_taxa_with_synonyms.csv
@@ -122,6 +129,7 @@ for (i in 1:length(target_taxa)){
     paste0(taxon_file, ".csv")))
   # print the taxon name we're working with
   cat("-----\n","Starting ", taxon_nm, ", taxon ", i, " of ", length(target_taxa), ".\n", sep="")
+  cat("Number of records: ",nrow(taxon_now),"\n",sep="")
   
   
   # now we will go through a set of tests to flag potentially suspect records...
@@ -161,13 +169,14 @@ for (i in 1:length(target_taxa)){
   
   ### COMPARE THE COUNTRY LISTED IN THE RECORD VS. THE LAT-LONG COUNTRY; flag
   #   when there is a mismatch; CoordinateCleaner package has something like 
-  #   this but also flags when the record doesn't have a country..didn't love that
+  #   this but also flags when the record doesn't have a country...
+  #   you could use that function if you want to flag NAs, or edit below:
   taxon_now <- taxon_now %>% mutate(.con=(ifelse(
     (as.character(latlong_countryCode) == as.character(countryCode_standard) &
        !is.na(latlong_countryCode) & !is.na(countryCode_standard)) |
       is.na(latlong_countryCode) | is.na(countryCode_standard), TRUE, FALSE)))
   cat("Testing country listed\n",sep="")
-  cat("Flagged ",length(taxon_now$.con[FALSE])," records.\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.con))," records.\n",sep="")
   
   
   ### FLAG SPATIAL OUTLIERS
@@ -200,7 +209,7 @@ for (i in 1:length(target_taxa)){
     taxon_now$.nativectry <- NA
   }
   cat("Testing native countries\n",sep="")
-  cat("Flagged ",length(taxon_now$.nativectry[FALSE])," records.\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.nativectry))," records.\n",sep="")
 
   
   ### FLAG OLDER RECORDS, based on two different year cutoffs (1950 & 1980)
@@ -208,19 +217,19 @@ for (i in 1:length(target_taxa)){
   taxon_now <- taxon_now %>% mutate(.yr1950=(ifelse(
     (as.numeric(year)>1950 | is.na(year)), TRUE, FALSE)))
   cat("Testing year < 1950\n",sep="")
-  cat("Flagged ",length(taxon_now$.yr1980[FALSE])," records.\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.yr1950))," records.\n",sep="")
     # 1980 cutoff
   taxon_now <- taxon_now %>% mutate(.yr1980=(ifelse(
     (as.numeric(year)>1980 | is.na(year)), TRUE, FALSE)))
   cat("Testing year < 1980\n",sep="")
-  cat("Flagged ",length(taxon_now$.yr1980[FALSE])," records.\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.yr1980))," records.\n",sep="")
   
   
   ### FLAG RECORDS THAT DON'T HAVE A YEAR PROVIDED
   taxon_now <- taxon_now %>% mutate(.yrna=(ifelse(
     !is.na(year), TRUE, FALSE)))
   cat("Testing year NA\n",sep="")
-  cat("Flagged ",length(taxon_now$.yrna[FALSE])," records.\n\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.yrna))," records.\n\n",sep="")
   
   
   # create some subsets to count how many records are in each, for summary table...
@@ -285,6 +294,8 @@ for (i in 1:length(target_taxa)){
 file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
                       pattern = "summary_of_occurrences", full.names = T)
 orig_summary <- read.csv(file_nm, colClasses = "character")
+  # keep just the first four columns, in case you're running this script a second time
+orig_summary <- orig_summary %>% select(taxon_name_accepted:num_water_records)
 summary_tbl2 <- full_join(orig_summary,summary_tbl,by="taxon_name_accepted")
 summary_tbl2
 

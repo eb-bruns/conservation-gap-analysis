@@ -3,11 +3,12 @@
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
 #   Missouri Botanical Garden
-### Funding: Base script funded by the Institute of Museum and Library 
-#   Services (IMLS MFA program grant MA-30-18-0273-18 to The Morton Arboretum).
-#   Moderate edits were added with funding from a cooperative agreement
-#   between the United States Botanic Garden and San Diego Botanic Garden
-#   (subcontracted to The Morton Arboretum), and NSF ABI grant #1759759
+### Funding: 
+#   -- Institute of Museum and Library Services (IMLS MFA program grant
+#        MA-30-18-0273-18 to The Morton Arboretum)
+#   -- United States Botanic Garden (cooperative agreement with San Diego
+#        Botanic Garden)
+#   -- NSF (award 1759759 to The Morton Arboretum)
 ### Last Updated: June 2023 ; first written March 2020
 ### R version 4.3.0
 
@@ -188,8 +189,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       color = ~database.pal(database),radius = 4,
       fillOpacity = 0.9, stroke = T) %>%
     ## Occurrence points flagged in each group (can toggle)
@@ -209,8 +211,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Within 500m of country/state centroid (.cen)") %>%
     # .urb (points in urban areas)
@@ -229,8 +232,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "In urban area (.urb)") %>%
     # .inst (points near biodiversity institutions)
@@ -249,8 +253,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Within 100m of biodiversity institution (.inst)") %>%
     # .con (points in a different country than listed in the record)
@@ -269,8 +274,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Not in reported country (.con)") %>%
     # .outl (points that are outliers based on algorithm selected in script #5)
@@ -289,8 +295,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Geographic outlier (.outl)") %>%
     # .nativectry (points that are not within the taxon's native countries)
@@ -309,8 +316,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Outside native country (.nativectry)") %>%
     # basis of record (marked as fossil or living specimen)
@@ -330,8 +338,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Fossil or living specimen (basisOfRecord)") %>%
     # establishment means (marked as introduced, managed, invasive, or cultivated)
@@ -352,8 +361,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Cultivated, introduced, or managed (establishmentMeans)") %>%
     # .yr1950 (recorded prior to 1950)
@@ -372,8 +382,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Recorded prior to 1950 (.yr1950)") %>%
     # .yr1980 (recorded prior to 1980)
@@ -392,8 +403,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Recorded prior to 1980 (.yr1980)") %>%
     # .yrna (no record year provided)
@@ -412,8 +424,9 @@ for(i in 1:length(taxa_cycle)){
         "<b>Latitude:</b> ",decimalLatitude,"<br/>",
         "<b>Longitude:</b> ",decimalLongitude,"<br/>",
         "<b>Coordinate uncertainty in meters:</b> ",coordinateUncertaintyInMeters,"<br/>",
+        "<b>Native database ID:</b> ",coordinateUncertaintyInMeters,"<br/>",
         "<b>References:</b> ",references,"<br/>",
-        "<b>ID:</b> ",UID),
+        "<b>UID:</b> ",UID),
       radius=4,stroke=T,color="black",weight=1,fillColor="red",fillOpacity=0.8,
       group = "Record year unknown (.yrna)") %>%
     ## Layers control (check boxes you can toggle on and off; 'overlayGroup' names

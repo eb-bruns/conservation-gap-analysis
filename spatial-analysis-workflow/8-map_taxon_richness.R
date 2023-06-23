@@ -189,8 +189,8 @@ hist(ctry_richness_all$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
   # BASED ON YOUR DATA, assign bin breaks and labels 
   #   most color palettes work will with max of 9 bins (not counting Inf)
   # you'll need to decide if you want to use natural breaks, even, exponential, etc.
-bins <- c(1,2,3,4,5,10,15,Inf)
-my_legend_labels <- c("1","2","3","4","5-9","10-14","15+")
+bins <- c(1,2,3,4,5,6,7,8,10,Inf)
+my_legend_labels <- c("1","2","3","4","5","6","7","8-9","10+")
   # create color palette
   #   see palette options by running display.brewer.all()
 my_palette <- colorBin(palette = "PuRd", bins = bins,
@@ -221,8 +221,8 @@ if(nrow(threatened_taxa)>0){
   my_title <- "Example taxon richness map"
   my_legend_title <- paste0("Number of native,","<br/>","threatened target taxa")
   hist(ctry_richness_threatened$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
-  bins <- c(1,2,3,4,5,10,15,Inf)
-  my_legend_labels <- c("1","2","3","4","5-9","10-14","15+")
+  bins <- c(1,2,3,4,5,6,10,15,Inf)
+  my_legend_labels <- c("1","2","3","4","5","6-9","10-14","15+")
   my_palette <- colorBin(palette = "PuRd", bins = bins,
                          domain = ctry_richness_threatened$Freq, 
                          reverse = F, na.color = "white")
@@ -248,8 +248,8 @@ if(nrow(endemic_taxa)>0){
   my_title <- "Example taxon richness map"
   my_legend_title <- paste0("Number of endemic","<br/>","target taxa")
   hist(ctry_richness_endemic$Freq,breaks=20,xlim=c(0,50),ylim=c(0,25))
-  bins <- c(1,2,3,4,5,6,7,8,9,Inf)
-  my_legend_labels <- c("1","2","3","4","5","6","7","8","9+")
+  bins <- c(1,2,3,4,5,6,7,8,10,Inf)
+  my_legend_labels <- c("1","2","3","4","5","6","7","8-9","10+")
   my_palette <- colorBin(palette = "PuRd", bins = bins,
                          domain = ctry_richness_endemic$Freq, 
                          reverse = F, na.color = "white")

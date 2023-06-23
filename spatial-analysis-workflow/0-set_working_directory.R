@@ -106,5 +106,9 @@ standardized_occ <- "standardized_occurrence_data"
 if(!dir.exists(file.path(main_dir, occ_dir, standardized_occ)))
   dir.create(file.path(main_dir, occ_dir, standardized_occ), recursive=T)
 
-
-
+# you will add folders and files here as you create output tables and maps
+#   from analyses, including taxon richness maps, ex situ coverage, and 
+#   protected area coverage (scripts in the #8 series)
+analysis_dir <- "analysis_outputs"
+if(!dir.exists(file.path(main_dir, analysis_dir)))
+  dir.create(file.path(main_dir, analysis_dir), recursive=T)

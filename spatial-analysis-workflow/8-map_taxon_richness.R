@@ -140,8 +140,8 @@ source("/Users/emily/Documents/GitHub/conservation-gap-analysis/spatial-analysis
 
 # create folder for output data
 data_out <- "taxon_richness_maps"
-if(!dir.exists(file.path(main_dir,occ_dir,standardized_occ,data_out)))
-  dir.create(file.path(main_dir,occ_dir,standardized_occ,data_out), 
+if(!dir.exists(file.path(main_dir,analysis_dir,data_out)))
+  dir.create(file.path(main_dir,analysis_dir,data_out), 
              recursive=T)
 
 
@@ -319,12 +319,12 @@ map_input <- data.frame(
   my_legend_title = c(paste0("Number of native","<br/>"," target taxa"),
                       paste0("Number of native","<br/>"," target taxa"),
                       paste0("Number of native","<br/>"," target taxa")),
-  my_bins <- c("0,1,2,3,4,5",
+  my_bins <- c("0,1,2,3,4,5,6,Inf",
                "0,1,2,3,4,5,6,7,Inf",
-               "0,1,2"),
-  my_legend_labels <- c('"0",1","2","3","4","5"',
+               "0,1,2,3,Inf"),
+  my_legend_labels <- c('"0",1","2","3","4","5","6+"',
                         '"0",1","2","3","4","5","6","7+"',
-                        '"0",1","2"')
+                        '"0",1","2","3+"')
 )
 
 ## loop through each country to read in a shapefile, calculate richness, and map
@@ -371,7 +371,7 @@ for(i in 1:nrow(map_input)){
 
   # save map
   htmlwidgets::saveWidget(map_richness,
-                          file.path(main_dir,occ_dir,standardized_occ,data_out,
+                          file.path(main_dir,analysis_dir,data_out,
                                     paste0("state-level_taxon_richness_",
                                            gsub(" ","_",map_input$country[i]),
                                            ".html")))

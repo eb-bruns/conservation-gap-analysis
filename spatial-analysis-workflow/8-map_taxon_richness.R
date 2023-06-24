@@ -90,8 +90,9 @@ map.countries <- function(countries,title,legend_text,legend_labels,pal){
               labFormat = function(type, cuts, p) {paste0(legend_labels)},
               position = "bottomright") %>%
     # add title
-    addControl(title, position = "topright") %>%
-    return(map)
+    addControl(title, position = "topright")
+  
+  return(map)
 }
 
 # create leaflet map for state/province-level taxon richness
@@ -125,8 +126,9 @@ map.states <- function(state_richness,states_all,title,legend_text,
               labFormat = function(type, cuts, p) {paste0(legend_labels)},
               position = "bottomright") %>%
     # add title
-    addControl(title, position = "topright") %>%
-    return(map)
+    addControl(title, position = "topright")
+
+  return(map)
 }
 
 

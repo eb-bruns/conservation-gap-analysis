@@ -1,5 +1,5 @@
 ### 8-calc_map_exsitu_coverage.R
-### Author: Emily Beckman Bruns
+### Author: Emily Beckman Bruns & Kate Good
 ### Supporting institutions: The Morton Arboretum, Botanic Gardens Conservation 
 #   International-US, United States Botanic Garden, San Diego Botanic Garden,
 #   Missouri Botanical Garden
@@ -24,10 +24,9 @@
   #   and locations where exsitu germplasm was collected.
 
 ### INPUTS:
-  ## target_taxa_with_synonyms.csv
-  #   List of target taxa and synonyms; see example in the "Target taxa list"
-  #   tab in Gap-analysis-workflow_metadata workbook; Required columns include: 
-  #   taxon_name, taxon_name_accepted, and taxon_name_status (Accepted/Synonym).
+  ## target taxa list 
+  #   Can use target_taxa_with_synonyms.csv from 1-get_taxa_metadata, or can
+  #   create own list of accepted taxon names
   ## ecoregions shapefile
   #   For calculations, there are three options. Script 1-prep_gis_layer.R 
   #   describes each and instructions for download; options include:
@@ -42,11 +41,13 @@
   ## world_countries_10m.shp
   #   Shapefile created in 1-prep_gis_layers.R script. It's the Natural Earth 
   #   10m countries layer with the lakes cut out and some ISO_2A issues fixed.
-  ## occurrence point data
+  ## occurrence point data, , including ex situ wild collection locations
   #   The script currently reads in occurrence point data from 
-  #   7-filter_occurrence_points.R(taxon_points_final folder), for calculations
-  #   and mapping; you could also use occurrence points in a different format
-  #   and edit the code a little.
+  #   7-filter_occurrence_points.R (taxon_points_final folder), for calculations
+  #   and mapping; you could also use occurrence points in a different format,
+  #   as long as the following fields are present: decimalLatitude,
+  #   decimalLongitude, database (in situ points can have any value here, but 
+  #   ex situ points need to have "Ex_situ" in the database column)
 
 ### OUTPUTS:
   ## Table of geographic and ecological coverage based on three buffer sizes
@@ -62,8 +63,9 @@
 ################################################################################
 
 # load packages
-my.packages <- c('tidyverse','terra','leaflet','rnaturalearth','Polychrome')
-  # versions I used (in the order listed above): 2.0.0, 1.7-29, 2.1.2, 0.3.3, 1.5.1
+my.packages <- c('tidyverse','textclean','terra','leaflet','rnaturalearth',
+                 'Polychrome')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 1.7-29, 2.1.2, 0.3.3, 1.5.1
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -210,6 +212,12 @@ map.exsitu <- function(taxon,eco_now,states,in_buff,ex_buff,ex1,ex2,ex3,in_pts){
     ## taxon name bolded at top right
     addControl(paste0("<b>",taxon), position = "topright") %>%
     ## global ecoregions
+      # if you want to label the ecoregions, I would suggest creating a map
+      #   with no points, buffers, or state borders (but with ecoregions labeled)
+      #   and using that as a reference guide for the taxon maps; labeling 
+      #   ecoregions on the taxon maps is really difficult in leaflet
+      # if you want to use other ecoregion layer, you just need to change the 
+      #   ECO_ID column to the equivalent ecoregion ID column in your layer
     addPolygons(
       data = eco_now, fillColor = ~eco_pal(eco_now$ECO_ID),
       fillOpacity = 0.8, color = "#757575", weight = 1.5, opacity = 0.8) %>%
@@ -240,39 +248,44 @@ map.exsitu <- function(taxon,eco_now,states,in_buff,ex_buff,ex1,ex2,ex3,in_pts){
                lng = ~decimalLongitude, lat = ~decimalLatitude, icon = triangle_lg,
                popup = ex3$inst_short) %>%
     ## in situ points
-      # can remove if you don't want these!
-      addCircleMarkers(data = in_pts,
-      	lng = ~decimalLongitude, lat = ~decimalLatitude,
-      	color = "#dedcd7", 
+      # can remove if you don't want these! remember to remove from legend too below
+      addCircleMarkers(
+        data = in_pts, lng = ~decimalLongitude, lat = ~decimalLatitude,
+      	color = "#dedcd7", stroke = F,  fillOpacity = 1,
       	# you may want to change the radius
-      	radius = 1.5, fillOpacity = 1, stroke = F) %>%
+      	radius = 1.5) %>%
     ## add scale bar
     addScaleBar(position = "bottomright",
                 options = scaleBarOptions(maxWidth = 150)) %>%
     ## add legend
     ##	not perfect, but something! Used https://imgbb.com to host the buffer
     ##	PNG images! So you could do that for any shape you'd like
-    # in situ and ex situ buffers
-    addControl(
-      html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
-    		style='width:40px;height:40px;'> Species' estimated native distribution<br/>
-    		(50 km buffer around in situ occurrence points)<br/>
-    		<img src='https://i.ibb.co/SR71N6k/Exsitu-buffer.png'
-    		style='width:40px;height:40px;'> Estimated capture of ex situ collections<br/>
-    		(50 km buffer around wild provenance localities)",
-      position = "bottomleft") %>%
-    # ex situ triangles
-    addControl(
-      html = "Source locality and number of wild provenance<br/>individuals in ex situ collections<br/>
-    		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
-    		style='width:8px;height:8px;'> 1-9
-    		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
-    		style='width:15px;height:15px;'> 10-25
-    		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
-    		style='width:22px;height:22px;'> 30+",
-      position = "bottomleft") %>%
+      # in situ and ex situ buffers
+      addControl(
+        html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
+      		style='width:40px;height:40px;'> Taxon's estimated native distribution<br/>
+      		(50 km buffer around in situ occurrence points)<br/>
+      		<img src='https://i.ibb.co/SR71N6k/Exsitu-buffer.png'
+      		style='width:40px;height:40px;'> Estimated capture of ex situ collections<br/>
+      		(50 km buffer around wild provenance localities)",
+        position = "bottomleft") %>%
+      # ex situ triangles
+      addControl(
+        html = "Source locality and number of wild provenance<br/>individuals in ex situ collections<br/>
+      		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
+      		style='width:8px;height:8px;'> 1-9
+      		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
+      		style='width:15px;height:15px;'> 10-25
+      		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
+      		style='width:22px;height:22px;'> 30+",
+        position = "bottomleft") %>%
+      # in situ occurrence points
+      addControl(
+        html = "<img src='https://www.freeiconspng.com/uploads/grey-circle-icon-8.png'
+        		style='width:9px;height:9px;'> In situ occurrence points",
+        position = "bottomleft") %>%
     ## set view (long and lat) and zoom level, for when map initially opens
-    setView(-99, 19, zoom = 4)
+    setView(-96, 40, zoom = 5)
   
   return(map)
 }
@@ -315,11 +328,17 @@ map.no.exsitu <- function(taxon,eco_now,states,in_buff,in_pts){
     ## add legend
     ##	not perfect, but something! Used https://imgbb.com to host the buffer
     ##	PNG images! So you could do that for any shape you'd like
-    addControl(
-      html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
-    		style='width:40px;height:40px;'> Species' estimated native distribution<br/>
-    		(50 km buffer around in situ occurrence points)",
-      position = "bottomleft") %>%
+      # in situ buffers
+      addControl(
+        html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
+      		style='width:40px;height:40px;'> Taxon's estimated native distribution<br/>
+      		(50 km buffer around in situ occurrence points)",
+        position = "bottomleft") %>%
+      # in situ occurrence points
+      addControl(
+        html = "<img src='https://www.freeiconspng.com/uploads/grey-circle-icon-8.png'
+          		style='width:9px;height:9px;'> In situ occurrence points",
+        position = "bottomleft") %>%
     ## set view (long and lat) and zoom level, for when map initially opens
     setView(-99, 19, zoom = 4)
   
@@ -359,7 +378,7 @@ if(make_maps){
   
   # CHOOSE cutoffs used for grouping ex situ data by number of individuals in maps;
   #   three categories will be created: 
-  #   1) x <= few_indiv   2) x > few_indiv & x < many_indiv   3) x >= many_indiv
+  #   1) x < few_indiv   2) x >= few_indiv & x < many_indiv   3) x >= many_indiv
   few_indiv <- 10
   many_indiv <- 30
   
@@ -371,10 +390,8 @@ if(make_maps){
   triangle_lg <- makeIcon(iconUrl = "https://www.freeiconspng.com/uploads/triangle-png-28.png",
                           iconWidth = 22, iconHeight = 22)
   
-  # select target countries (countries with taxa you're mapping)
-  # ISO 2-digit codes:
-  target_iso <- c("US","MX","CA")
-  # full names:
+  # SELECT target countries (countries with taxa you're mapping); these are
+  #   for getting state boundaries from rnaturalearth package
   target_countries <- c("United States of America","Mexico","Canada")
   
   # create folder for output maps
@@ -392,6 +409,8 @@ pt.proj <- "+proj=longlat +datum=WGS84"
 calc.proj <- "+proj=eqearth +datum=WGS84"
 
 # read in target taxa list
+  # you can also simply create the "target_taxa" and "target_files" lists
+  #   manually, if desired
 taxon_list <- read.csv(file.path(main_dir,taxa_dir,"target_taxa_with_synonyms.csv"), 
                        header=T, colClasses="character",na.strings=c("","NA"))
 # list of accepted taxa to cycle through
@@ -455,6 +474,9 @@ if(make_maps){
   eco_map <- st_as_sf(eco_map)
   
   # create ecoregion color palette, based on manually-selected 'seed colors'
+    # every time you run this section it creates a new palette; if you
+    #   want the same color ecoregions for every taxon, run them all in one go;
+    #   if you don't like the ecoregion colors, run this again or edit it
   eco_pal_colors <- createPalette(length(unique(eco_map$ECO_ID)),
                                   seedcolors = c("#ba3c3c","#ba7d3c","#baab3c",
                                                  "#3ca7ba","#3c6aba","#573cba",
@@ -476,7 +498,7 @@ if(make_maps){
 #   table in a final report; you may want to format differently (split out
 #   cell contents that are concatenated) if using for different output
 summary_tbl <- data.frame(
-  species = "start",
+  taxon = "start",
   geo_sm = "start", geo_md = "start",	geo_lg = "start",
   eco_sm = "start", eco_md = "start", eco_lg = "start",
   EOO = "start",
@@ -486,7 +508,7 @@ summary_tbl <- data.frame(
 
 for(i in 1:length(target_taxa)){
   
-  ## can test with one species first if you'd like - skip loop line above and
+  ## can test with one taxon first if you'd like - skip loop line above and
   ##  uncomment next line
   # i <- 1
   
@@ -526,7 +548,7 @@ for(i in 1:length(target_taxa)){
     
     # add text results to summary table
     summary_add <- data.frame(
-      species = target_taxa[i],
+      taxon = target_taxa[i],
       geo_sm = "0%", geo_md = "0%",	geo_lg = "0%",
       eco_sm = "0%", eco_md = "0%", eco_lg = "0%",
       EOO = round(hull_area,0),
@@ -587,7 +609,7 @@ for(i in 1:length(target_taxa)){
     ## Summary Table
     # add text results to summary table
     summary_add <- data.frame(
-      species = target_taxa[i],
+      taxon = target_taxa[i],
       geo_sm = geo_coverage_sm,
       geo_md = geo_coverage_md,
       geo_lg = geo_coverage_lg,
@@ -610,9 +632,9 @@ for(i in 1:length(target_taxa)){
       
       # split ex situ data by number of individuals, to use different symbols
       exsitu1 <- exsitu_pt %>% arrange(individualCount) %>%
-        filter(individualCount <= few_indiv)
+        filter(individualCount < few_indiv)
       exsitu2 <- exsitu_pt %>% arrange(individualCount) %>%
-        filter(individualCount > few_indiv & individualCount < many_indiv)
+        filter(individualCount >= few_indiv & individualCount < many_indiv)
       exsitu3 <- exsitu_pt %>% arrange(individualCount) %>%
         filter(individualCount >= many_indiv)
       

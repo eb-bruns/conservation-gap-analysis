@@ -24,6 +24,8 @@
 #   In contrast, the polygon intersection method is very memory-intensive and,
 #   depending on the species distribution (smaller dist = faster calc), the
 #   calculation can run a few hours to multiple days.
+## NOTE THIS SCRIPT USES PACKAGES THAT WILL BE RETIRED SOON ~ rgdal & rgeos, 
+##  so a couple parts need to be rewritten once they're no longer supported
 
 ### DATA IN:
 ### TARGET SPECIES

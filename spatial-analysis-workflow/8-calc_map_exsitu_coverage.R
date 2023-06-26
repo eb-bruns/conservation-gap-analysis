@@ -41,7 +41,7 @@
   ## world_countries_10m.shp
   #   Shapefile created in 1-prep_gis_layers.R script. It's the Natural Earth 
   #   10m countries layer with the lakes cut out and some ISO_2A issues fixed.
-  ## occurrence point data, , including ex situ wild collection locations
+  ## occurrence point data, including ex situ wild collection locations
   #   The script currently reads in occurrence point data from 
   #   7-filter_occurrence_points.R (taxon_points_final folder), for calculations
   #   and mapping; you could also use occurrence points in a different format,
@@ -50,8 +50,9 @@
   #   ex situ points need to have "Ex_situ" in the database column)
 
 ### OUTPUTS:
-  ## Table of geographic and ecological coverage based on three buffer sizes
-  #	  (user defined, but defaults are 20, 50, and 100 km)
+  ## Table of geographic and ecological coverage (%) based on three buffer sizes
+  #	  (user defined, but defaults are 20, 50, and 100 km), plus Extent of 
+  #   Occurrence (EOO; convex hull around occurrence points) in km2
   ## (optional) Maps with occurrence points and ex situ wild collection 
   #   locations - plus buffer layers around each point layer - and ecoregions
   #   and, optionally, state borders. The map is in an interactive HTML format

@@ -13,9 +13,11 @@
 
 ### DESCRIPTION:
 # Run the GapAnalysis package, which I have forked and edited at:
-# https://github.com/eb-bruns/GapAnalysis
+# https://github.com/eb-bruns/GapAnalysis_EBB
 # You can see results from this analysis at:
 # https://northamericanfruitnuttreecwr.github.io
+# Species Distribution models were created using a repo forked from Dan Carver:
+# https://github.com/eb-bruns/CWR-of-the-USA-Gap-Analysis_EBB
 
 
 ################################################################################

@@ -526,14 +526,14 @@ keep_col <- c(
   #occurrence
   "establishmentMeans","individualCount",
   #location
-  "decimalLatitude","decimalLongitude",
-  "coordinateUncertaintyInMeters","geolocationNotes",
-  "localityDescription","locality","verbatimLocality",
-  "locationNotes","municipality","higherGeography","county",
-  "stateProvince","country","countryCode","countryCode_standard",
-  "latlong_countryCode",
+  "decimalLatitude","decimalLongitude","coordinateUncertaintyInMeters",
+  "elevationInMeters", # if you added elevation column
+  "geolocationNotes","localityDescription","locality","verbatimLocality",
+  "locationNotes","municipality","higherGeography","county","stateProvince",
+  "country","countryCode","countryCode_standard","latlong_countryCode",
   #additional optional taxa metadata
-  "rl_category","ns_rank")
+  "rl_category","ns_rank"
+  )
 geo_pts2 <- geo_pts2[,keep_col]
 
 # take a look

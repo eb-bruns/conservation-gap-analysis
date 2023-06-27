@@ -496,17 +496,21 @@ geo_pts <- geo_pts %>% arrange(database)
 # also creating an "all_source_databases" column to capture a list of all
 #   databases from which duplicates were removed; this step can take a while 
 #   if there are lots a rows
-geo_pts2 <- geo_pts %>%
+geo_pts <- geo_pts %>%
   group_by(taxon_name_accepted,lat_round,long_round) %>%
   mutate(all_source_databases = paste(unique(database), collapse = ', ')) %>%
   distinct(taxon_name_accepted,lat_round,long_round,.keep_all=T) %>%
   ungroup() %>%
   select(-flag)
-nrow(geo_pts2)
+nrow(geo_pts)
 
 # add ex situ data back in
-geo_pts2 <- full_join(geo_pts2,ex_situ)
-nrow(geo_pts2)
+geo_pts <- full_join(geo_pts,ex_situ)
+nrow(geo_pts)
+
+################################################################################
+# Select final set of columns
+################################################################################
 
 ## set header/column name order and keep only necessary columns
 keep_col <- c( 
@@ -534,16 +538,15 @@ keep_col <- c(
   #additional optional taxa metadata
   "rl_category","ns_rank"
   )
-geo_pts2 <- geo_pts2[,keep_col]
+geo_pts <- geo_pts[,keep_col]
 
 # take a look
-head(as.data.frame(geo_pts2))
-nrow(geo_pts2)
-table(geo_pts2$database)
-rm(geo_pts)
+head(as.data.frame(geo_pts))
+nrow(geo_pts)
+table(geo_pts$database)
 
 # write file if you'd like; not necessary since we write taxon-level files
-#write.csv(geo_pts2, file.path(main_dir,occ_dir,standardized_occ,
+#write.csv(geo_pts, file.path(main_dir,occ_dir,standardized_occ,
 #  paste0("all_occurrence_points_compiled_", Sys.Date(), ".csv")), row.names = F)
 
 ################################################################################
@@ -552,7 +555,7 @@ rm(geo_pts)
 
 # summarize results for each target taxon
   # count lat-long records
-count_geo <- geo_pts2 %>% count(taxon_name_accepted)
+count_geo <- geo_pts %>% count(taxon_name_accepted)
 names(count_geo)[2] <- "num_latlong_records"
   # count records with invalid lat-long but have locality description
 count_locality <- locality_pts %>% count(taxon_name_accepted)
@@ -577,7 +580,7 @@ write.csv(summary, file.path(main_dir,occ_dir,standardized_occ,
 ################################################################################
 
 # split records to create one CSV for each target taxon
-sp_split <- split(geo_pts2, as.factor(geo_pts2$taxon_name_accepted))
+sp_split <- split(geo_pts, as.factor(geo_pts$taxon_name_accepted))
 names(sp_split) <- gsub(" ","_",names(sp_split))
 names(sp_split) <- gsub("\\.","",names(sp_split))
 

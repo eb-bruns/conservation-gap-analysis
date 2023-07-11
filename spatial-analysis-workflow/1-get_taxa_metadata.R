@@ -66,7 +66,8 @@ unique(separate(taxon_list,taxon_name,into="genus",extra="drop")[1])
 # in case you're running this again, just keep the original columns:
 taxon_list <- taxon_list %>% 
     select(taxon_name,taxon_name_accepted,taxon_name_status,
-           ns_rank, ns_taxon_name #add any other manually-added columns here
+           ## !! add any other manually-added columns here !!
+           ns_rank, ns_taxon_name, elevation_range
            ) 
 
 # create folder for files used in / created by this script
@@ -298,15 +299,21 @@ unique(taxon_list[is.na(taxon_list$gts_native_dist) &
            is.na(taxon_list$rl_native_dist),]$taxon_name_accepted)
 ### you can add data for these manually if you'd like; for example:
 add_manually <- data.frame(
-  taxon_name_accepted = c("Asimina longifolia", "Asimina manasota", 
+  taxon_name_accepted = c("Asimina incana","Asimina longifolia",
+                          "Asimina manasota","Asimina pygmaea",
+                          "Asimina reticulata","Asimina x nashii",
                           "Juglans major var. major",
                           "Juglans microcarpa var. microcarpa"),
   manual_native_dist = c("United States","United States",
+                         "United States","United States",
+                         "United States","United States",
                          "Mexico; United States",
                          "United States"),
   manual_native_dist_iso2 = c("US","US",
-                               "MX; US",
-                               "US"))
+                              "US","US",
+                              "US","US",
+                              "MX; US",
+                              "US"))
 taxon_list <- left_join(taxon_list,add_manually)
 # if you don't add anything manually, you'll still need those columns, so add:
 #taxon_list$manual_native_dist <- NA
@@ -335,7 +342,8 @@ unique(taxon_list$all_native_dist_iso2)
 # order columns
 taxon_list <- taxon_list %>%
   select(taxon_name,taxon_name_accepted,taxon_name_status,
-         ns_rank, ns_taxon_name, #add any other manually-added columns here 
+         ## !! add any other manually-added columns here !!
+         ns_rank, ns_taxon_name, elevation_range,
          rl_category,all_native_dist,all_native_dist_iso2,
          rl_native_dist,rl_native_dist_iso2,
             rl_introduced_dist,rl_introduced_dist_iso2,rl_taxon_name,

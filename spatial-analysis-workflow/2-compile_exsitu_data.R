@@ -801,7 +801,7 @@ all_data7$prov_type <- str_to_lower(all_data7$prov_type)
 #   needs to be preserved but is in the wrong place
   # these are used in Genesys; try each and comment out if error is thrown...
 #all_data7[which(all_data7$prov_type=="130"|grepl("^130) ",all_data7$prov_type)),]$notes <- "Semi-natural/sown"
-#all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
+all_data7[which(all_data7$prov_type=="410"|grepl("^410) ",all_data7$prov_type)),]$notes <- "Breeding/research material: Breeder's line"
 #all_data7[which(all_data7$prov_type=="300"|grepl("^300) ",all_data7$prov_type)),]$notes <- "Traditional cultivar/landrace"
 all_data7[which(all_data7$prov_type=="400"|grepl("^400) ",all_data7$prov_type)),]$notes <- "Breeding/research material"
 all_data7[which(all_data7$prov_type=="500"|grepl("^500) ",all_data7$prov_type)),]$notes <- "Advanced or improved cultivar (conventional breeding methods)"
@@ -1021,7 +1021,7 @@ coord_test <- cc_val(all_data8,lon = "long_dd",lat = "lat_dd",
 #                              taxon_region == "South America"),
 #                           as.numeric(paste0("-",as.character(long_dd))), long_dd))
 # OR, IF ALL YOUR TARGET TAXA ARE NATIVE TO THE AMERICAS, make all longitudes negative:
-#   note that 'NAs introduced by coercion' warning message is ok
+#   'NAs introduced by coercion' warning message is ok
 all_data8 <- all_data8 %>% 
   mutate(long_dd = if_else(long_dd > 0, as.numeric(paste0("-",as.character(long_dd))), long_dd))
          
@@ -1240,7 +1240,7 @@ keep_col <- c(
   # original versions of columns, for reference
   "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
   # OPTIONAL additional taxon metadata
-  "rl_category","ns_rank"#,"taxon_region"
+  "rl_category","ns_rank","elevation_range"#,"taxon_region"
 )
 all_data9 <- all_data9[,keep_col]
 
@@ -1496,12 +1496,12 @@ write.csv(need_geo, file.path(main_dir, exsitu_dir,standardized_exsitu,
 
 # read in all compiled ex situ data (exported above)
 exsitu <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "All_ExSitu_Compiled_2023-06-19.csv"), #change this to your version!
+  "All_ExSitu_Compiled_2023-07-10.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 
 # read in geolocated dataset
 geo_raw <- read.csv(file.path(main_dir, exsitu_dir, standardized_exsitu,
-  "ExSitu_Need_Geolocation_2023-06-19_Geolocated.csv"), #change this to your version!
+  "ExSitu_Need_Geolocation_2023-07-10_Geolocated.csv"), #change this to your version!
   header = T, colClasses="character", na.strings = c("NA",""))
 head(geo_raw)
   # check this is just NA, meaning no "priority" records are not geolocated
@@ -1561,7 +1561,7 @@ keep_col <- c(
   # original versions of columns, for reference
   "orig_prov_type","orig_acc_num","orig_num_indiv","orig_lat","orig_long",
   # OPTIONAL additional taxon metadata
-  "rl_category","ns_rank"#,"taxon_region"
+  "rl_category","ns_rank","elevation_range"#,"taxon_region"
 )
 exsitu_all <- exsitu_all[,keep_col]
 

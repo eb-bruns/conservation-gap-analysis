@@ -22,9 +22,9 @@
   ## urban_areas_50m (folder with shapefile)
   #   Urban areas layer from Natural Earth:
   #   https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-urban-areas/ 
-  ## (optional; only needed for script 8-calc_map_exsitu_coverage.R)
-  ## Ecoregions shapefile, either global, North American, or US (see 
-  #   descriptions within script below)
+  ## Ecoregions shapefile (optional; only needed for 8-calc_map_exsitu_coverage.R)
+  #   Ecoregions, either global, North American, or US (see descriptions within
+  #   script below)
 
 ################################################################################
 # Load libraries

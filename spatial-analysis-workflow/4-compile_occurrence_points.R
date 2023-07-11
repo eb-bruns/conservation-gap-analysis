@@ -22,8 +22,8 @@
   #   establishmentMeans, decimalLatitude, and decimalLongitude. Records without 
   #   valid coordinates or that fall in the water are separated out and saved, 
   #   then records with valid coordinates are thinned spatially and saved in 
-  #   taxon-specific CSV files. There is also an option to add an elevationInMeters
-  #   column that can be used later for filtering taxon points.
+  #   taxon-specific CSV files. There is also an option to add an 
+  #   elevationInMeters column that can be used later for filtering taxon points.
   ## NOTE THAT THE CoordinateCleaner PACKAGE CURRENT VERSION (2.0-20) DEPENDS ON
   ## rgeos and rgdal, WHICH WILL RETIRE SHORTLY! If the package does not release
   ## an update that removes these dependencies, the functions in this script 
@@ -74,8 +74,7 @@ my.packages <- c('tidyverse','textclean','CoordinateCleaner','terra','countrycod
                  # if you'd like to flag by elevation, you'll need:
                  ,'elevatr',"sf"
 )
-  # versions I used (in the order listed above): 2.0.0, 0.9.3, 2.0-20, 1.7-29, 1.5.0
-  #                                              0.4.5
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 2.0-20, 1.7-29, 1.5.0, 0.4.5, 1.0-13
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -276,7 +275,7 @@ rm(coord_test)
 #   on knowing which country (or sometimes state) the point falls within
 # IMPROVEMENT OPPORTUNITY: a buffer could be added to the countries layer, to 
 #   catch points that are just outside the feature boundary but still could
-#   be on land, since the features can't be so exact (too large)
+#   be on land, since the features aren't so exact (would make them too large)
 
 # read in world countries layer created in 1-prep_gis_layers.R
 world_ctry <- vect(file.path(main_dir,gis_dir,"world_countries_10m",
@@ -536,7 +535,7 @@ keep_col <- c(
   "locationNotes","municipality","higherGeography","county","stateProvince",
   "country","countryCode","countryCode_standard","latlong_countryCode",
   #additional optional taxa metadata
-  "rl_category","ns_rank"
+  "rl_category","ns_rank","elevation_range"
   )
 geo_pts <- geo_pts[,keep_col]
 

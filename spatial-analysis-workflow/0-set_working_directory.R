@@ -36,7 +36,6 @@ if (Sys.info()[4] == "Africa.local") {
   gap_dir <- "/Users/emily/Documents/GitHub/GapAnalysis_EBB/R"
   print(paste("Working from the lovely", Sys.info()[4]))
   
-  
 ## For additional user or workstation (fill in each ________ with your file path)
 } else if (Sys.info()[4] == "________") {
   # main working directory (folder where you want most files to be)

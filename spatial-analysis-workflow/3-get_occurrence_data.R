@@ -1236,10 +1236,10 @@ rm(fia_raw)
 # read in ex situ data we saved in 2-compile_exsitu_data.R (edit to match your 
 #   file names)
 exsitu_raw1 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
-  "ExSitu_Compiled_Post-Geolocation_2023-06-19.csv"), colClasses = "character",
+  "ExSitu_Compiled_Post-Geolocation_2023-07-10.csv"), colClasses = "character",
     na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
 exsitu_raw2 <- read.csv(file.path(main_dir,occ_dir,raw_occ,"Ex_situ",
-  "ExSitu_Dead_2023-06-19.csv"), colClasses = "character",
+  "ExSitu_Dead_2023-07-10.csv"), colClasses = "character",
   na.strings=c("", "NA"), strip.white=T, fileEncoding="UTF-8")
 exsitu_raw <- bind_rows(exsitu_raw1,exsitu_raw2)
 nrow(exsitu_raw)

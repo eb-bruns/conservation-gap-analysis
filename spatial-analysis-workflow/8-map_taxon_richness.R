@@ -205,7 +205,7 @@ map_richness_all <- map.countries(ctry_richness_all,my_title,my_legend_title,
 map_richness_all
 ## save map
 htmlwidgets::saveWidget(map_richness_all,
-                        file.path(main_dir,occ_dir,standardized_occ,data_out,
+                        file.path(main_dir,analysis_dir,data_out,
                                   "country-level_taxon_richness_ALL.html"))
 
 ####
@@ -233,7 +233,7 @@ if(nrow(threatened_taxa)>0){
                                            my_palette)
   map_richness_threatened
   htmlwidgets::saveWidget(map_richness_threatened,
-                          file.path(main_dir,occ_dir,standardized_occ,data_out,
+                          file.path(main_dir,analysis_dir,data_out,
                                     "country-level_taxon_richness_THREATENED.html"))
 } else { print("You have no IUCN Red List Threatened taxa") }
 
@@ -260,7 +260,7 @@ if(nrow(endemic_taxa)>0){
                                         my_palette)
   map_richness_endemic
   htmlwidgets::saveWidget(map_richness_endemic,
-                          file.path(main_dir,occ_dir,standardized_occ,data_out,
+                          file.path(main_dir,analysis_dir,data_out,
                                     "country-level_taxon_richness_ENDEMIC.html"))
 } else { print("You have no endemic taxa") }
 
@@ -307,6 +307,8 @@ target_countries <- countrycode(target_codes, origin = "iso2c",
   target_countries[target_countries=="United States"] <- "United States of America"
 # see your list of target countries
 target_countries
+  ## ! you can manually remove countries if you don't want to map them !
+  target_countries <- target_countries[ !target_countries == "Puerto Rico"]
   
 # create map text inputs for each country; can be the same or different, but
 #   if you want them all to be the same you can skip the dataframe and assign
@@ -317,15 +319,23 @@ map_input <- data.frame(
   country = target_countries,
   my_title = c("Example taxon richness map for the US",
                "Example taxon richness map for Canada",
+               "Example taxon richness map for Cuba",
+               "Example taxon richness map for Dominican Republic",
                "Example taxon richness map for Mexico"),
   my_legend_title = c(paste0("Number of native","<br/>"," target taxa"),
+                      paste0("Number of native","<br/>"," target taxa"),
+                      paste0("Number of native","<br/>"," target taxa"),
                       paste0("Number of native","<br/>"," target taxa"),
                       paste0("Number of native","<br/>"," target taxa")),
   my_bins <- c("0,1,2,3,4,5,6,Inf",
                "0,1,2,3,4,5,6,7,Inf",
+               "0,1,2,Inf",
+               "0,1,2,Inf",
                "0,1,2,3,Inf"),
   my_legend_labels <- c('"0",1","2","3","4","5","6+"',
                         '"0",1","2","3","4","5","6","7+"',
+                        '"0","1","2+"',
+                        '"0","1","2+"',
                         '"0",1","2","3+"')
 )
 

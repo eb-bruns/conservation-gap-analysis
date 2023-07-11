@@ -94,6 +94,10 @@ urban_areas <- vect(file.path(main_dir,gis_dir,"urban_areas_50m",
 # Iterate through taxon files and flag potentially suspect points
 ################################################################################
 
+## set threshold for coordinate uncertainty flag; anything greater than this 
+##  value (meters) will be flagged
+max_uncertainty <- 1000
+
 # list of taxon files to iterate through
 taxon_files <- list.files(path=file.path(main_dir,occ_dir,standardized_occ,data_in), 
                           ignore.case=FALSE, full.names=FALSE, recursive=TRUE)
@@ -112,7 +116,10 @@ summary_tbl <- data.frame(
   .nativectry = "start", 
   .yr1950 = "start", 
   .yr1980 = "start",
-  .yrna = "start", 
+  .yrna = "start",
+  .unc = "start",
+  .elev = "start",
+  .rec = "start",
     stringsAsFactors=F)
 
 
@@ -206,7 +213,8 @@ for (i in 1:length(target_taxa)){
       mutate(.nativectry=(ifelse(latlong_countryCode %in% native_ctrys, 
                                  TRUE, FALSE)))
   } else {
-    taxon_now$.nativectry <- NA
+  # if no country data for the taxon, leave unflagged
+    taxon_now$.nativectry <- TRUE
   }
   cat("Testing native countries\n",sep="")
   cat("Flagged ",length(which(!taxon_now$.nativectry))," records.\n",sep="")
@@ -229,25 +237,62 @@ for (i in 1:length(target_taxa)){
   taxon_now <- taxon_now %>% mutate(.yrna=(ifelse(
     !is.na(year), TRUE, FALSE)))
   cat("Testing year NA\n",sep="")
-  cat("Flagged ",length(which(!taxon_now$.yrna))," records.\n\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.yrna))," records.\n",sep="")
+  
+  
+  ### FLAG RECORDS WITH COORDINATE UNCERTAINTY ABOVE YOUR THRESHOLD (FLAGS NA!) 
+  taxon_now <- taxon_now %>% mutate(.unc=(ifelse(
+    as.numeric(coordinateUncertaintyInMeters)<max_uncertainty & 
+      !is.na(coordinateUncertaintyInMeters), TRUE, FALSE)))
+  cat("Testing coordinate uncertainty\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.unc))," records.\n",sep="")
+  
+  
+  ### FLAG RECORDS OUTSIDE YOUR ELEVATION RANGE, BY TAXON
+  ###   for this you need an 'elevation_range' column in your 
+  ###   target_taxa_with_synonyms.csv file
+  if("elevation_range" %in% colnames(taxon_now)){
+    elev_range <- str_squish(taxon_now$elevation_range)[1]
+    if(!is.na(elev_range)){
+      elev_range <- unique(unlist(strsplit(taxon_now$elevation_range, "-")))
+      elev_min <- as.numeric(elev_range[1])
+      elev_max <- as.numeric(elev_range[2])
+      taxon_now <- taxon_now %>% mutate(.elev=(ifelse(
+        (as.numeric(elevationInMeters)>=elev_min &
+         as.numeric(elevationInMeters)<=elev_max) |
+          is.na(elevationInMeters), TRUE, FALSE)))
+    } else {
+      taxon_now <- taxon_now %>% mutate(.elev=TRUE)
+    }
+    cat("Testing elevation\n",sep="")
+    cat("Flagged ",length(which(!taxon_now$.elev))," records.\n",sep="")
+  }
+  
+  
+  ### FLAG RECORDS THAT ARE NOT CURRENT/NATIVE BASED ON TWO COLUMNS:
+  ###   basisOfRecord AND/OR establishmentMeans
+  taxon_now <- taxon_now %>% mutate(.rec=(ifelse(
+    basisOfRecord != "FOSSIL_SPECIMEN" & 
+    basisOfRecord != "LIVING_SPECIMEN" &
+    establishmentMeans != "INTRODUCED" & 
+    establishmentMeans != "MANAGED" &
+    establishmentMeans != "CULTIVATED", 
+      TRUE, FALSE)))
+  cat("Testing basisOfRecord & establishmentMeans\n",sep="")
+  cat("Flagged ",length(which(!taxon_now$.rec))," records.\n\n",sep="")
+  
   
   
   # create some subsets to count how many records are in each, for summary table...
 
   # count of completely unflagged points
   total_unflagged <- taxon_now %>%
-    filter(.cen & .urb & .inst & .con & .outl & .yr1950 & .yr1980 & .yrna &
-             (.nativectry | is.na(.nativectry)) &
-             basisOfRecord != "FOSSIL_SPECIMEN" & 
-             basisOfRecord != "LIVING_SPECIMEN" &
-             establishmentMeans != "INTRODUCED" & 
-             establishmentMeans != "MANAGED" &
-             establishmentMeans != "CULTIVATED"
-    )
+    filter(.cen & .urb & .inst & .con & .outl & .nativectry & .yr1950 & 
+             .yr1980 & .yrna & .unc & .elev & .rec)
   
   # OPTIONAL count of unflagged points based on selected filters you'd like 
   #   to use, to see how many points there are; change as desired; commented- 
-  #   out lines are the filters we don't want to use
+  #   out lines are the filters you don't want to use
   select_unflagged <- taxon_now %>%
     filter(
             .cen & 
@@ -255,16 +300,13 @@ for (i in 1:length(target_taxa)){
             .outl &
             .con & 
             #.urb & 
+            .nativectry &
             .yr1950 & 
             #.yr1980 & 
             #.yrna &
-            (.nativectry | is.na(.nativectry)) &
-            basisOfRecord != "FOSSIL_SPECIMEN" &
-            basisOfRecord != "LIVING_SPECIMEN" &
-            establishmentMeans != "INTRODUCED" &
-            establishmentMeans != "MANAGED" &
-            establishmentMeans != "INVASIVE" &
-            establishmentMeans != "CULTIVATED"
+            #.unc &
+            .elev &
+            .rec
     )
   
   # add data to summary table
@@ -281,6 +323,9 @@ for (i in 1:length(target_taxa)){
     .yr1950 = sum(!taxon_now$.yr1950),
     .yr1980 = sum(!taxon_now$.yr1980),
     .yrna = sum(!taxon_now$.yrna),
+    .unc = sum(!taxon_now$.unc),
+    .elev = sum(!taxon_now$.elev),
+    .rec = sum(!taxon_now$.rec),
     stringsAsFactors=F)
   summary_tbl[i,] <- summary_add
 

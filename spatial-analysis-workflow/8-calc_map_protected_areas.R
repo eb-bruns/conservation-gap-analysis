@@ -66,6 +66,8 @@ my.packages <- c('tidyverse','textclean','terra','sf','spThin','rnaturalearth',
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
 
+addLegend <- leaflet::addLegend
+
 ################################################################################
 # Create functions
 ################################################################################
@@ -109,7 +111,7 @@ map.pa <- function(taxon,ctry_boundaries,protected_areas,pts,pts_in_pa){
               colors = c("#4b965a","#231185","#d6569c"),
               position = "topright", opacity = 1) %>%
     ## set view (long and lat) and zoom level, for when map initially opens
-    setView(-96, 40, zoom = 5)
+    setView(-96, 40, zoom = 4)
 }
 
 # calculate percent of occurrence points in global protected areas (WDPA)
@@ -192,8 +194,8 @@ make_maps <- TRUE
 if(make_maps){
   # create folder for output maps
   maps_out <- "protected_areas_maps"
-  if(!dir.exists(file.path(main_dir,analysis_dir,data_out)))
-    dir.create(file.path(main_dir,analysis_dir,data_out), 
+  if(!dir.exists(file.path(main_dir,analysis_dir,maps_out)))
+    dir.create(file.path(main_dir,analysis_dir,maps_out), 
                recursive=T)
 }
 
@@ -214,11 +216,12 @@ if(!dir.exists(file.path(main_dir,gis_dir,pa_dir)))
 ##  target taxa...
 
 # CHOOSE target countries (countries with target taxa), using the 
-#   3-digit ISO code
-target_countries <- c("USA","MEX","CAN")
+#   3-digit ISO code --> https://www.iban.com/country-codes
+#   Note that Puerto Rico (PRI) is separate from the US
+target_countries <- c("USA","MEX","CAN","CUB","DOM","PRI")
 
 # SET current month, using 3-letter abbreviation
-current_month <- "Jun"
+current_month <- "Jul"
 # SET current year
 current_year <- "2023"
 
@@ -298,8 +301,8 @@ if(make_maps){
 }
 rm(shapes,one_file,temp_shape,i,n)
 
-# if you'd like, remove local downloads
-unlink(file.path(main_dir,gis_dir,pa_dir), recursive = TRUE)
+# if you'd like, you can remove local downloads:
+#unlink(file.path(main_dir,gis_dir,pa_dir), recursive = TRUE)
 
 ################################################################################
 # Set up standards and read in additional polygon data if mapping
@@ -327,7 +330,8 @@ if(make_maps){
   
   # if you have very widespread taxa (e.g. span one third or more of the US)
   #   make a list of those widespread taxa to skip mapping (output too large)
-  taxa_no_map <- c("Asimina parviflora","Asimina triloba")
+  taxa_no_map <- c("Asimina parviflora","Asimina triloba","Juglans cinerea",
+                   "Juglans nigra")
   
   # read in world countries layer created in 1-prep_gis_layers.R
   # this will be used to clip buffers so they're not in the water, and
@@ -374,34 +378,39 @@ for(i in 1:length(target_taxa)){
   
   ### CALC PROTECTED AREAS COVERAGE
   
+  # if you have a lot of points (~10K+) you may get "Error: vector memory 
+  #   exhausted"; I followed the instructions here to fix (MacOS)...
+  #   https://stackoverflow.com/questions/51295402/r-on-macos-error-vector-memory-exhausted-limit-reached
   pa_analysis_output <- pts.in.pa(occ_pts, "decimalLatitude", "decimalLongitude",
                                   "taxon_name_accepted", 1, pt.proj, pa_list)
   # add row to summary table
   summary_tbl[i,] <- pa_analysis_output[[1]]
-  # points in protected areas df
-  pts_in_pa_now <- pa_analysis_output[[2]]
 
   ### CREATE MAP
   
-  if(make_maps & !(target_taxa[i] %in% taxa_no_map)){
-    
-    # add buffer around occurrence points and crop PAs to that buffer
-    occ_buff <- create.buffers(occ_pts,100000,pt.proj,pt.proj,world_poly_clip)
-    pa_crop <- mask(all_pa,occ_buff)
-    # aggregate PAs so there are not multiple on top of each other
-    pa_crop <- aggregate(pa_crop,by="ISO3")
-    # make PAs into sf instead of terra
-    pa_crop <- st_as_sf(pa_crop)
+  if(make_maps){
+    if(!(target_taxa[i] %in% taxa_no_map)){
       
-    # create map
-    map <- map.pa(target_taxa[i],world_poly_sf,pa_crop,occ_pts,
-                  pts_in_pa_now); map
-      
-    # save map
-    htmlwidgets::saveWidget(map,file.path(main_dir,analysis_dir,maps_out,
-                                          paste0(target_files[i],
-                                                 "__protected_area_coverage_map",
-                                                 ".html")))
+      # points in protected areas df
+      pts_in_pa_now <- pa_analysis_output[[2]]
+      # add buffer around occurrence points and crop PAs to that buffer
+      occ_buff <- create.buffers(occ_pts,100000,pt.proj,pt.proj,world_poly_clip)
+      pa_crop <- mask(all_pa,occ_buff)
+      # aggregate PAs so there are not multiple on top of each other
+      pa_crop <- aggregate(pa_crop,by="ISO3")
+      # make PAs into sf instead of terra
+      pa_crop <- st_as_sf(pa_crop)
+        
+      # create map
+      map <- map.pa(target_taxa[i],world_poly_sf,pa_crop,occ_pts,
+                    pts_in_pa_now); map
+        
+      # save map
+      htmlwidgets::saveWidget(map,file.path(main_dir,analysis_dir,maps_out,
+                                            paste0(target_files[i],
+                                                   "__protected_area_coverage_map",
+                                                   ".html")))
+    }
   }
 }
 

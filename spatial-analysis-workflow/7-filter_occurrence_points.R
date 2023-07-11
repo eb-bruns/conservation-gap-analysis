@@ -129,25 +129,20 @@ for (i in 1:length(target_taxa)){
   # we keep all ex situ points even if flagged, so they must be manually
   #   selected for removal if bad
       database == "Ex_situ" |
-  # choose which filters you want to use; comment out those you don't want, or
-  #   add more if missing
-        (
-          .cen & 
-          .inst & 
-          .outl &
-          .con & 
-          #.urb & 
-          .yr1950 & 
-          #.yr1980 & 
-          #.yrna &
-          (.nativectry | is.na(.nativectry)) &
-          basisOfRecord != "FOSSIL_SPECIMEN" &
-          basisOfRecord != "LIVING_SPECIMEN" &
-          establishmentMeans != "INTRODUCED" &
-          establishmentMeans != "MANAGED" &
-          establishmentMeans != "INVASIVE" &
-          establishmentMeans != "CULTIVATED"
-        ))
+  # choose which filters you want to use: comment out those you want to skip
+        .cen & 
+        .inst & 
+        .outl &
+        .con & 
+        #.urb & 
+        .nativectry &
+        .yr1950 & 
+         #.yr1980 & 
+         #.yrna &
+         #.unc &
+         .elev &
+         .rec
+    )
   cat(paste0("--Removed ",orig_num_pts-nrow(taxon_now)," points based on flagging colums\n"))
   
   
@@ -187,7 +182,7 @@ for (i in 1:length(target_taxa)){
     taxon_now <- suppressMessages(full_join(taxon_now,add))
     cat(paste0("--Added back ",length(keep)," points based on IDs to keep\n"))
   }
-    
+  
   ## write final occurrence point file
   write.csv(taxon_now, file.path(main_dir,occ_dir,standardized_occ,data_out,
                                  paste0(taxon_file,".csv")), 
@@ -210,12 +205,10 @@ file_nm <- list.files(path = file.path(main_dir,occ_dir,standardized_occ),
                       pattern = "summary_of_occurrences", full.names = T)
 orig_summary <- read.csv(file_nm, colClasses = "character")
   # keep just the columns from script 5 output, in case you're running this script a second time
-orig_summary <- orig_summary %>% select(taxon_name_accepted:.yrna)
+orig_summary <- orig_summary %>% select(taxon_name_accepted:.rec)
 summary_tbl2 <- full_join(orig_summary,summary_tbl,by="taxon_name_accepted")
 summary_tbl2
 
 # write summary table
 write.csv(summary_tbl2, file.path(main_dir,occ_dir,standardized_occ,
                                   paste0("summary_of_occurrences_", Sys.Date(), ".csv")),row.names = F)
-
-

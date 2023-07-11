@@ -65,8 +65,8 @@
 
 # load packages
 my.packages <- c('tidyverse','textclean','terra','leaflet','rnaturalearth',
-                 'Polychrome')
-  # versions I used (in the order listed above): 2.0.0, 0.9.3, 1.7-29, 2.1.2, 0.3.3, 1.5.1
+                 'Polychrome','sf')
+  # versions I used (in the order listed above): 2.0.0, 0.9.3, 1.7-29, 2.1.2, 0.3.3, 1.5.1, 1.0-13
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
 rm(my.packages)
@@ -341,7 +341,7 @@ map.no.exsitu <- function(taxon,eco_now,states,in_buff,in_pts){
           		style='width:9px;height:9px;'> In situ occurrence points",
         position = "bottomleft") %>%
     ## set view (long and lat) and zoom level, for when map initially opens
-    setView(-99, 19, zoom = 4)
+    setView(-96, 40, zoom = 4)
   
   return(map)
 }
@@ -393,7 +393,8 @@ if(make_maps){
   
   # SELECT target countries (countries with taxa you're mapping); these are
   #   for getting state boundaries from rnaturalearth package
-  target_countries <- c("United States of America","Mexico","Canada")
+  target_countries <- c("United States of America","Mexico","Canada","Cuba",
+                        "Dominican Republic","Puerto Rico")
   
   # create folder for output maps
   maps_out <- "exsitu_coverage_maps"

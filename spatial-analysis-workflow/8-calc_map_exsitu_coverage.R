@@ -463,15 +463,19 @@ if(make_maps){
   # prep ecoregions for mapping
   # transform ecoregion polygons to point projection, for mapping
   eco_map <- project(ecoregions,pt.proj)
-  # the global ecoregions layer does not have major lakes cut out, so we'll do 
-  #   that; takes a little while; you can skip if needed
-  eco_map <- crop(eco_map,world_poly_clip)
   # select realm of interest; keep only ecoregions in that realm; this helps
   # with the mapping palette and size of output map
   #   OPTIONS:
   #     "Australasia" "Antarctic"   "Afrotropic"  "Indo-Malay"  "Nearctic"   
   #     "Neotropic"   "Oceania"     "Palearctic" 
-  eco_map <- eco_map[eco_map$WWF_REALM2 == "Nearctic",]
+  eco_map <- eco_map[eco_map$WWF_REALM2 == "Nearctic" | 
+                     eco_map$WWF_REALM2 == "Neotropic" ,]
+  # the global ecoregions layer does not have major lakes cut out, so we'll do 
+  #   that; takes a little while; you can skip if needed
+  eco_map <- crop(eco_map,world_poly_clip)
+  # if you're using more than one realm and/or have concerns about the maps
+  #   being too large, crop ecoregions by state layer as well
+  eco_map <- crop(eco_map,state_boundaries)
   # make sf object instead of terra, for input into leaflet
   eco_map <- st_as_sf(eco_map)
   

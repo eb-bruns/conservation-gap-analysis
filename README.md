@@ -17,7 +17,7 @@ If you use code from this repository, please cite it in relevant reports/publica
 The spatial-analysis-workflow folder contains a cohesive step-by-step workflow for completing the computational part of a gap analysis. There are additional optional analysis components outside R. The bonus-scripts folder holds scripts from various previous analyses, which are optional and do not flow as part of the workflow but can be used for inspiration as desired. Details are available in the Conservation Gap Analysis Methodology User Guide. Note that although the workflow is cohesive, it is not plug-and-play; most of the scripts are meant to be worked through slowly and considered and edited as-needed for the specific taxa, region, stakeholders, skillset, and goals of the specific project.
 
 Briefly, the components of the gap analysis that can be completed using the spatial-analysis-workflow scripts are:
-Script &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp | Description
+Script                               | Description
 :----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------
 0-set_working_directory.R            | Set up main folder structure
 1-get_taxa_metadata.R                | Compile metadata on target taxa: IUCN Red List category and native countries of occurrence from the IUCN Red List and BGCI GlobalTreeSeach
@@ -31,3 +31,4 @@ Script &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp | Description
 8-calc_map_exsitu_coverage.R         | Calculate and map the geographic and ecological representation of *ex situ* collections for each target taxon, using a buffer-intersection method
 8-calc_map_protected_areas.R         | Calculate and map the protected areas coverage for each target taxon, using a point-in-polygon method
 8-map_taxon_richness.R               | Create maps of taxon richness at the country level using native countries of occurrence and at the state level using wild occurrence points
+<img width=200/>                     | 

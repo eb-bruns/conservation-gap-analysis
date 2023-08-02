@@ -17,10 +17,10 @@ If you use code from this repository, please cite it in relevant reports/publica
 The spatial-analysis-workflow folder contains a cohesive step-by-step workflow for completing the computational part of a gap analysis. There are additional optional analysis components outside R. The bonus-scripts folder holds scripts from various previous analyses, which are optional and do not flow as part of the workflow but can be used for inspiration as desired. Details are available in the Conservation Gap Analysis Methodology User Guide. Note that although the workflow is cohesive, it is not plug-and-play; most of the scripts are meant to be worked through slowly and considered and edited as-needed for the specific taxa, region, stakeholders, skillset, and goals of the specific project.
 
 Briefly, the components of the gap analysis that can be completed using the spatial-analysis-workflow scripts are:
-Script                    | Description
-------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------
-0-set_working_directory.R | Set up main folder structure
-1-get_taxa_metadata.R     | Compile metadata on target taxa: IUCN Red List category and native countries of occurrence from the IUCN Red List and BGCI GlobalTreeSeach
+Script                     | Description
+-------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------
+0-set_working_directory.R  | Set up main folder structure
+1-get_taxa_metadata.R      | Compile metadata on target taxa: IUCN Red List category and native countries of occurrence from the IUCN Red List and BGCI GlobalTreeSeach
 
 * Download and prepare spatial layers used throughout the workflow: world country boundaries, urban areas, ecoregions (1-prep_gis_layers.R)
 * Compile and refine accession-level *ex situ* collections data (botanic gardens; genebanks) from Genesys, FAO WIEWS, and (if applicable) a manually-executed survey of collections (2-compile_exsitu_data.R)

@@ -1,6 +1,6 @@
 # conservation-gap-analysis
 
-## BACKGROUND
+### BACKGROUND
 
 This repository supports the Conservation Gap Analysis Methodology User Guide, which is an internal document of The Morton Arboretum, available to collaborators upon request; please email treeconservation@mortonarb.org to request access. 
 
@@ -8,11 +8,11 @@ Developments to this methodology have been ongoing since 2016. Project partners 
 
 This work has been supported by the USDA Forest Service (Cooperative Agreement 16-CA-11132546-045), Botanic Gardens Conservation International-US, the Institute of Museum and Library Services (award #MA-30-18-0273-18), the United States Botanic Garden (Cooperative agreement with San Diego Botanic Garden), NSF (award 1759759), and Stanley Smith Horticultural Trust.
 
-## CITATION
+### CITATION
 
 If you use code from this repository, please cite it in relevant reports/publications. Click "Cite this repository" in the right-hand panel to retrieve the citation.
 
-## REPO OVERVIEW
+### REPO OVERVIEW
 
 The spatial-analysis-workflow folder contains a cohesive step-by-step workflow for completing the computational part of a gap analysis. There are additional optional analysis components outside R. The bonus-scripts folder holds scripts from various previous analyses, which are optional and do not flow as part of the workflow but can be used for inspiration as desired. Details are available in the Conservation Gap Analysis Methodology User Guide. Note that although the workflow is cohesive, it is not plug-and-play; most of the scripts are meant to be worked through slowly and considered and edited as-needed for the specific taxa, region, stakeholders, skillset, and goals of the specific project.
 

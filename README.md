@@ -28,7 +28,7 @@ Script                               | Description
 5-flag_occurrence_points.R           | Flag potentially-suspect wild occurrence points
 6-visualize_occurrence_points.R      | Create interactive HTML maps of wild occurrence points, for reviewing and retrieving IDs of points to remove
 7-filter_occurrence_points.R         | Filter wild occurrence points using flags (script 5) and any manually-selected IDs to remove (script 6), producing a final set of points for analyses
-8-clac_map_exsitu_coverage.R         | Calculate and map the geographic and ecological representation of *ex situ* collections for each target taxon, using a buffer-intersection method
+8-calc_map_exsitu_coverage.R         | Calculate and map the geographic and ecological representation of *ex situ* collections for each target taxon, using a buffer-intersection method
 8-calc_map_protected_areas.R         | Calculate and map the protected areas coverage for each target taxon, using a point-in-polygon method
 8-map_taxon_richness.R               | Create maps of taxon richness at the country level using native countries of occurrence and at the state level using wild occurrence points
 

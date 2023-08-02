@@ -18,7 +18,7 @@ The spatial-analysis-workflow folder contains a cohesive step-by-step workflow f
 
 Briefly, the components of the gap analysis that can be completed using the spatial-analysis-workflow scripts are:
 Script                               | Description
-:----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------
+:----------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------
 0-set_working_directory.R            | Set up main folder structure
 1-get_taxa_metadata.R                | Compile metadata on target taxa: IUCN Red List category and native countries of occurrence from the IUCN Red List and BGCI GlobalTreeSeach
 1-prep_gis_layers.R                  | Download and prepare spatial layers used throughout the workflow: world country boundaries, urban areas, ecoregions

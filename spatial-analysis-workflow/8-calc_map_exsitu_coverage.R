@@ -16,10 +16,10 @@
 
 ### DESCRIPTION:
   ## This script creates circular buffers around in situ points (wild occurrence
-  #		records) and ex situ points (wild locations where seeds were collected for
-  #		cultivation in a botanic garden or storage in a genebank) to calculate the 
-  #		geographic (area within buffers) and ecological (number of ecoregions 
-  #		within buffers) representation of ex situ living collections.
+  #   records) and ex situ points (wild locations where seeds were collected for
+  #   cultivation in a botanic garden or storage in a genebank) to calculate the 
+  #   geographic (area within buffers) and ecological (number of ecoregions 
+  #   within buffers) representation of ex situ living collections.
   ## Optionally, an interactive map can be created to view ecoregions, buffers, 
   #   and locations where exsitu germplasm was collected.
 
@@ -51,7 +51,7 @@
 
 ### OUTPUTS:
   ## Table of geographic and ecological coverage (%) based on three buffer sizes
-  #	  (user defined, but defaults are 20, 50, and 100 km), plus Extent of 
+  #   (user defined, but defaults are 20, 50, and 100 km), plus Extent of 
   #   Occurrence (EOO; convex hull around occurrence points) in km2
   ## (optional) Maps with occurrence points and ex situ wild collection 
   #   locations - plus buffer layers around each point layer - and ecoregions

@@ -18,3 +18,6 @@ version: 1.0.0
 doi: 10.5281/zenodo.8246949
 date-released: 2023-08-14
 url: "https://github.com/eb-bruns/conservation-gap-analysis"
+contact:
+  - email: treeconservation@mortonarb.org
+    name: "The Morton Arboretum"

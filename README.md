@@ -2,11 +2,11 @@
 
 ### BACKGROUND
 
-This repository supports the Conservation Gap Analysis Methodology User Guide, which is an internal document of The Morton Arboretum, available to collaborators upon request; please email treeconservation@mortonarb.org to request access. 
+This repository supports the Conservation Gap Analysis Methodology User Guide, which is an internal document of The Morton Arboretum, available to collaborators upon request; please email treeconservation@mortonarb.org to request access. Virtual training sessions for the methodology were held in June 2023, led by Emily Bruns and funded by The Morton Arboretum.
 
-Developments to this methodology have been ongoing since 2016. Project partners have included Botanic Gardens Conservation International (BGCI), BGCI-US, the USDA Forest Service, the United States Botanic Garden, San Diego Botanic Garden, Missouri Botanic Garden, Fauna & Flora International, and Atlanta Botanic Garden. Virtual training sessions for the methodology were held in June 2023, led by Emily Bruns and funded by The Morton Arboretum.
+Developments to this methodology have been ongoing since 2016. Project partners have included Botanic Gardens Conservation International (BGCI), BGCI-US, the USDA Forest Service, the United States Botanic Garden, San Diego Botanic Garden, Missouri Botanic Garden, Fauna & Flora International, and Atlanta Botanic Garden. Thank you to all those who have contributed to developing the methodology, including but not limited to: Abby Meyer, Murphy Westwood, Sean Hoban, Silvia Alvarez-Clare, Amy Byrne, Daniel Carver, Dan Crowley, Audrey Denvir, David Gill, Kate Good, Colin Khoury, Jean Linsky, Gary Man, Nan McCarry, Ray Mims, David Pivorunas, Kirsty Shaw, Shannon Still, and Emily Warschefsky.
 
-This work has been supported by the USDA Forest Service (Cooperative Agreement 16-CA-11132546-045), Botanic Gardens Conservation International-US, the Institute of Museum and Library Services (award MA-30-18-0273-18), the United States Botanic Garden (Cooperative agreement with San Diego Botanic Garden), NSF (award 1759759), and Stanley Smith Horticultural Trust.
+This work was funded by grants from the Institute of Museum and Library Services (awards MA-30-18-0273-18, MG-245575-OMS-20, and MG-251613-OMS-22), Magnolia Society International, Stanley Smith Horticultural Trust, United States Botanic Garden, National Science Foundation (award 1759759), and the USDA Forest Service (Cooperative Agreement 16-CA-11132546-045).
 
 ### CITATION
 

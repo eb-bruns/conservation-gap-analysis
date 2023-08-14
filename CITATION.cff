@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this repository, please cite it as below."
 authors:
 - family-names: "Bruns"
-  given-names: "Emily B"
+  given-names: "Emily Beckman"
   orcid: "https://orcid.org/0000-0002-2250-554X"
 - family-names: "Still"
   given-names: "Shannon M"
@@ -14,7 +14,7 @@ authors:
   given-names: "Sean"
   orcid: "https://orcid.org/0000-0002-0348-8449"
 title: "conservation-gap-analysis"
-version: 1.0.0
+version: 1.0
 doi: 10.5281/zenodo.8246950
 date-released: 2023-08-14
 url: "https://github.com/eb-bruns/conservation-gap-analysis"

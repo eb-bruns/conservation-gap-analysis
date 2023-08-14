@@ -31,4 +31,4 @@ Script                               | Description
 8-calc_map_exsitu_coverage.R         | Calculate and map the geographic and ecological representation of *ex situ* collections for each target taxon, using a buffer-intersection method
 8-calc_map_protected_areas.R         | Calculate and map the protected areas coverage for each target taxon, using a point-in-polygon method
 8-map_taxon_richness.R               | Create maps of taxon richness at the country level using native countries of occurrence and at the state level using wild occurrence points
-<img width=400/>                     | 
+<img width=500/>                     | 

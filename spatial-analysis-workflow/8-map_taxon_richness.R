@@ -49,7 +49,7 @@
 
 # load packages
 my.packages <- c('tidyverse','sf','RColorBrewer','leaflet','rnaturalearth',
-                 'countrycode')
+                 'countrycode','webshot')
   # versions I used (in the order listed above): 2.0.0, 1.0-13, 1.1-3, 2.1.2, 0.3.3, 1.5.0
 #install.packages (my.packages) #Turn on to install current versions
 lapply(my.packages, require, character.only=TRUE)
@@ -74,7 +74,8 @@ richness.countries <- function(df,polygons){
 }
 
 # create leaflet map for country-level taxon richness
-map.countries <- function(countries,title,legend_text,legend_labels,pal){
+map.countries <- function(countries,title,legend_text,legend_labels,pal,
+                          my_lat,my_long,my_zoom){
   map <- leaflet() %>%
     # add background for the map; see additional background options here:
     #		https://leaflet-extras.github.io/leaflet-providers/preview/
@@ -90,7 +91,9 @@ map.countries <- function(countries,title,legend_text,legend_labels,pal){
               labFormat = function(type, cuts, p) {paste0(legend_labels)},
               position = "bottomright") %>%
     # add title
-    addControl(title, position = "topright")
+    addControl(title, position = "topright") %>%
+    # set center coordinate and zoom level of the output map
+    setView(lat = my_lat, lng = my_long, zoom = my_zoom)
   
   return(map)
 }
@@ -200,13 +203,23 @@ my_palette <- colorBin(palette = "PuRd", bins = bins,
                                 reverse = F, na.color = "white")
 ## create map
 map_richness_all <- map.countries(ctry_richness_all,my_title,my_legend_title,
-                                  my_legend_labels,my_palette)
+                                  my_legend_labels,my_palette,
+                                  # center lat and long of map, plus zoom level
+                                  # YOU WILL NEED TO PLAY WITH THESE TO GET RIGHT
+                                  # or you can take a manual screenshot instead 
+                                  #   of saving automatically as a PNG (line 219)
+                                  48, -1, 2)
 ## view map
 map_richness_all
-## save map
+## save map as HTML (interactive)
 htmlwidgets::saveWidget(map_richness_all,
                         file.path(main_dir,analysis_dir,data_out,
                                   "country-level_taxon_richness_ALL.html"))
+## save screenshot of map (PNG)
+webshot(file.path(main_dir,analysis_dir,data_out,
+                  "country-level_taxon_richness_ALL.html"), 
+        file.path(main_dir,analysis_dir,data_out,
+                  "country-level_taxon_richness_ALL.png"))
 
 ####
 ## country-level richness for THREATENED taxa

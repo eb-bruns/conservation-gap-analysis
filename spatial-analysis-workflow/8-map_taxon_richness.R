@@ -204,10 +204,10 @@ my_palette <- colorBin(palette = "PuRd", bins = bins,
 ## create map
 map_richness_all <- map.countries(ctry_richness_all,my_title,my_legend_title,
                                   my_legend_labels,my_palette,
-                                  # center lat and long of map, plus zoom level
+                                  # center lat and long of map, plus zoom level.
+                                  # these are important if you want to save
+                                  #   automatically as a PNG (line 219-222), but 
                                   # YOU WILL NEED TO PLAY WITH THESE TO GET RIGHT
-                                  # or you can take a manual screenshot instead 
-                                  #   of saving automatically as a PNG (line 219)
                                   48, -1, 2)
 ## view map
 map_richness_all
@@ -215,7 +215,7 @@ map_richness_all
 htmlwidgets::saveWidget(map_richness_all,
                         file.path(main_dir,analysis_dir,data_out,
                                   "country-level_taxon_richness_ALL.html"))
-## save screenshot of map (PNG)
+## optionally, save screenshot of map (PNG)
 webshot(file.path(main_dir,analysis_dir,data_out,
                   "country-level_taxon_richness_ALL.html"), 
         file.path(main_dir,analysis_dir,data_out,

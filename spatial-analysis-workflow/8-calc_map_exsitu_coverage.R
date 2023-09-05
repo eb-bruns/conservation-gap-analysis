@@ -265,14 +265,14 @@ map.exsitu <- function(taxon,eco_now,states,in_buff,ex_buff,ex1,ex2,ex3,in_pts){
       addControl(
         html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
       		style='width:40px;height:40px;'> Taxon's estimated native distribution<br/>
-      		(50 km buffer around in situ occurrence points)<br/>
+      		(50km buffer around wild occurrence points)<br/>
       		<img src='https://i.ibb.co/SR71N6k/Exsitu-buffer.png'
-      		style='width:40px;height:40px;'> Estimated capture of ex situ collections<br/>
-      		(50 km buffer around wild provenance localities)",
+      		style='width:40px;height:40px;'> Estimated coverage of ex situ collections<br/>
+      		(50km buffer around wild source localities)",
         position = "bottomleft") %>%
       # ex situ triangles
       addControl(
-        html = "Source locality and number of wild provenance<br/>individuals in ex situ collections<br/>
+        html = "Source locality and number of wild origin<br/>individuals in ex situ collections<br/>
       		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
       		style='width:8px;height:8px;'> 1-9
       		<img src='https://www.freeiconspng.com/uploads/triangle-png-28.png'
@@ -283,7 +283,7 @@ map.exsitu <- function(taxon,eco_now,states,in_buff,ex_buff,ex1,ex2,ex3,in_pts){
       # in situ occurrence points
       addControl(
         html = "<img src='https://www.freeiconspng.com/uploads/grey-circle-icon-8.png'
-        		style='width:9px;height:9px;'> In situ occurrence points",
+        		style='width:9px;height:9px;'> Wild occurrence points",
         position = "bottomleft") %>%
     ## set view (long and lat) and zoom level, for when map initially opens
     setView(-96, 40, zoom = 5)
@@ -333,12 +333,12 @@ map.no.exsitu <- function(taxon,eco_now,states,in_buff,in_pts){
       addControl(
         html = "<img src='https://i.ibb.co/1dW95pC/Insitu-buffer.png'
       		style='width:40px;height:40px;'> Taxon's estimated native distribution<br/>
-      		(50 km buffer around in situ occurrence points)",
+      		(50km buffer around wild occurrence points)",
         position = "bottomleft") %>%
       # in situ occurrence points
       addControl(
         html = "<img src='https://www.freeiconspng.com/uploads/grey-circle-icon-8.png'
-          		style='width:9px;height:9px;'> In situ occurrence points",
+          		style='width:9px;height:9px;'> Wild occurrence points",
         position = "bottomleft") %>%
     ## set view (long and lat) and zoom level, for when map initially opens
     setView(-96, 40, zoom = 4)

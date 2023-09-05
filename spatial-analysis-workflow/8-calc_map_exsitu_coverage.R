@@ -480,9 +480,14 @@ if(make_maps){
   eco_map <- st_as_sf(eco_map)
   
   # create ecoregion color palette, based on manually-selected 'seed colors'
-    # every time you run this section it creates a new palette; if you
+    # P.S. apparently the seed colors don't make much of a difference:
+    #   https://cran.r-project.org/web/packages/Polychrome/vignettes/creatingPalettes.html
+    # Every time you run this section it creates a new palette; if you
     #   want the same color ecoregions for every taxon, run them all in one go;
     #   if you don't like the ecoregion colors, run this again or edit it
+    ## NOTE that if you have a smaller set of ecoregions, you can also use an 
+    #   online color-picker (there are lots) to simply choose a full of colors 
+    #   you want instead of using the createPalette function
   eco_pal_colors <- createPalette(length(unique(eco_map$ECO_ID)),
                                   seedcolors = c("#ba3c3c","#ba7d3c","#baab3c",
                                                  "#3ca7ba","#3c6aba","#573cba",

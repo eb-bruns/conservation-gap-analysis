@@ -286,6 +286,15 @@ sort(unique(all_data$genus))
 not_all_na <- function(x) any(!is.na(x))
 all_data <- all_data %>% select(where(not_all_na))
 
+# add required taxon name columns if they are not present, since we use them
+#   later; the script will throw an error if they're not in the data
+if(length(all_data$genus) == 0){ all_data$genus <- "" }
+if(length(all_data$hybrid) == 0){ all_data$hybrid <- "" }
+if(length(all_data$species) == 0){ all_data$species <- "" }
+if(length(all_data$infra_rank) == 0){ all_data$infra_rank <- "" }
+if(length(all_data$infra_name) == 0){ all_data$infra_name <- "" }
+if(length(all_data$cultivar) == 0){ all_data$cultivar <- "" }
+
 # check out column names
 sort(colnames(all_data))
 ### IF NEEDED, SEPARATE SINGLE COLUMN INTO MULTIPLE...
@@ -450,7 +459,7 @@ nrow(all_data)
 #   rename to "Wiews-Exsitu.csv"
 
 # read in data
-wiews <- read.csv(file.path(main_dir, exsitu_dir, raw_exsitu, "Wiews_Exsitu.csv"))
+wiews <- read.csv(file.path(main_dir, exsitu_dir, raw_exsitu, "Wiews-Exsitu.csv"))
 str(wiews)
 
 # filter out Genesys data

@@ -288,7 +288,6 @@ all_data <- all_data %>% select(where(not_all_na))
 
 # add required taxon name columns if they are not present, since we use them
 #   later; the script will throw an error if they're not in the data
-if(length(all_data$genus) == 0){ all_data$genus <- "" }
 if(length(all_data$hybrid) == 0){ all_data$hybrid <- "" }
 if(length(all_data$species) == 0){ all_data$species <- "" }
 if(length(all_data$infra_rank) == 0){ all_data$infra_rank <- "" }

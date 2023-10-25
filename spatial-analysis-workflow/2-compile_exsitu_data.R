@@ -144,6 +144,8 @@ read.exsitu.csv <- function(path,submission_year){
   # for each file, make some edits...
   for(file in seq_along(file_dfs)){
     df <- file_dfs[[file]]
+    # replace strange characters in column names (arise from saving?)
+    names(df) <- gsub(x = names(df), pattern = "ï\\.\\.", replacement = "")
     # if there is no inst_short provided, add based on the file name
     if(length(df$inst_short) == 0){
       df$inst_short <- rep(mgsub(file_list[file],c(paste0(path,"/"),".csv"),""),nrow(df))
@@ -156,8 +158,6 @@ read.exsitu.csv <- function(path,submission_year){
     # remove extra blank columns that may be present
     t <- grepl("^X",names(df))
     if(length(unique(t))>1){ df <- df[, -grep("^X", names(df))] }
-    # replace strange characters in column names (arise from saving?)
-    names(df) <- gsub(x = names(df), pattern = "ï\\.\\.", replacement = "")
     # add accession number if there isn't one
     if("acc_num" %in% names(df) & nrow(df[which(is.na(df$acc_num)),]) > 0){
       df[which(is.na(df$acc_num)),]$acc_num <- paste0("added",
